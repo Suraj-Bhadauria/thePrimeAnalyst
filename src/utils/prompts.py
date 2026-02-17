@@ -12,15 +12,13 @@ SCHEMA_TEXT = format_schema(config.TRANSACTION_COLUMNS)
 # print(SCHEMA_TEXT)
 
 # PROMPT 1: Query Understanding
-QUERY_UNDERSTANDING_PROMPT = f"""You are an expert at understanding business questions about payment transaction data.
+QUERY_UNDERSTANDING_PROMPT = """You are an expert at understanding business questions about payment transaction data.
 
 
 Available Data Schema:
-{SCHEMA_TEXT}
+""" + SCHEMA_TEXT + """
 
-User Question: {{question}}
 
-Conversation History: {{history}}
 
 Analyze the question and extract:
 1. **Intent Type**: Choose ONE from:

@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Any
 from src.config import config
 from src.utils.prompts import QUERY_UNDERSTANDING_PROMPT
+import json
 
 
 # todo : find out what all metrices can be found in user's query besides these
@@ -35,11 +36,14 @@ class QueryUnderstandingAgent:
     def understand_query(self, question: str, history: str = "") -> QueryPlan:
         """Understand user query and extract structured information"""
         
-        prompt = ChatPromptTemplate.from_template(
-            QUERY_UNDERSTANDING_PROMPT + "\n\n{format_instructions}"
-        )
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", QUERY_UNDERSTANDING_PROMPT),
+            ("human", "User Question: {question}"),
+            ("human", "Conversation History: {history}"),
+            ("system", "{format_instructions}")
+        ])
         
-        chain = prompt | self.llm
+        chain = prompt | self.llm 
         
         response = chain.invoke({
             "question": question,
@@ -49,7 +53,7 @@ class QueryUnderstandingAgent:
         
         try:
             # Parse the JSON response
-            import json
+            
             content = response.content
             
             # Try to extract JSON from markdown code blocks
