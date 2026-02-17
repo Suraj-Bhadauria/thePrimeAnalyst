@@ -1,6 +1,5 @@
 from src.config import config
 
-
 # helper function to convert json data dictionary to natural lang for llm
 def format_schema(schema: dict) -> str:
     return "\n".join(

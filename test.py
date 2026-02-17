@@ -1,20 +1,15 @@
 # ROUGH COMPONENT AND SNIPPET TESTING
 # YOU CAN IGNORE IT
 
+from src.agents.query_agent import QueryPlan, QueryUnderstandingAgent
 
+obj = QueryUnderstandingAgent();
 
+# question = "What is the total transaction amount?"
+# question = "How many transactions were successful?"
+# question = "How many P2P vs P2M transactions are there?"
+question = "What is the total amount spent in Delhi?"
 
-from src.utils.data_loader import data_loader
+queryPlan = obj.understand_query({question})
 
-
-data_loader.load_data()
-sample_data = data_loader.get_sample_data(5)
-print(sample_data)
-
-print('='*100)
-print("==========================================")
-
-print("COLUMN INFO")
-# print("\n")
-column_info = data_loader.get_column_info()
-print(column_info)
+print(queryPlan)
