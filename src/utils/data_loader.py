@@ -78,7 +78,37 @@ class DataLoader:
     def get_column_info(self) -> dict:
         """Get column information"""
         return config.TRANSACTION_COLUMNS
-    
+
+    # Column alias map: common shorthand → actual column name
+    COLUMN_ALIASES: dict = {
+        "bank": "sender_bank",
+        "age_group": "sender_age_group",
+        "age": "sender_age_group",
+        "state": "sender_state",
+        "status": "transaction_status",
+        "amount": "amount_inr",
+        "type": "transaction_type",
+        "category": "merchant_category",
+        "device": "device_type",
+        "network": "network_type",
+        "fraud": "fraud_flag",
+        "day": "day_of_week",
+        "hour": "hour_of_day",
+        "weekend": "is_weekend",
+    }
+
+    def resolve_column(self, col: str) -> str:
+        """Resolve a column name or alias to the actual DataFrame column name.
+
+        If *col* already exists in the DataFrame it is returned as-is.
+        Otherwise the COLUMN_ALIASES map is consulted.  If no match is
+        found the original value is returned unchanged (so that
+        downstream code can raise a proper 'column not found' error).
+        """
+        if self._df is not None and col in self._df.columns:
+            return col
+        return self.COLUMN_ALIASES.get(col, col)
+
     def get_unique_values(self, column: str) -> list:
         """Get unique values for a column"""
         if column in self._df.columns:

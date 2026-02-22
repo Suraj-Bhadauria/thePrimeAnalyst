@@ -9,7 +9,8 @@ class InsightAgent:
         self.llm = ChatGroq(
             temperature=0.3,  # Slightly higher for creative insights
             model_name=config.MODEL_NAME,
-            groq_api_key=config.GROQ_API_KEY
+            groq_api_key=config.GROQ_API_KEY,
+            max_tokens=4096  # Allow detailed, comprehensive responses
         )
     
     def generate_insights(self, question: str, analysis_results: dict, stats_context: dict = None) -> str:

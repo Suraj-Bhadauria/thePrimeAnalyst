@@ -42,12 +42,12 @@ class StatisticalTools:
         # Apply filters
         if 'filters' in params:
             for filter_cond in params['filters']:
-                col = filter_cond['column']
+                col = data_loader.resolve_column(filter_cond['column'])
                 val = filter_cond['value']
                 df = df[df[col] == val]
         
         # Calculate by segment
-        segment = params.get('segment_by')
+        segment = data_loader.resolve_column(params.get('segment_by', '')) if params.get('segment_by') else None
         
         if segment:
             results = df.groupby(segment).apply(
@@ -76,11 +76,11 @@ class StatisticalTools:
         
         if 'filters' in params:
             for filter_cond in params['filters']:
-                col = filter_cond['column']
+                col = data_loader.resolve_column(filter_cond['column'])
                 val = filter_cond['value']
                 df = df[df[col] == val]
         
-        segment = params.get('segment_by')
+        segment = data_loader.resolve_column(params.get('segment_by', '')) if params.get('segment_by') else None
         
         if segment:
             results = df.groupby(segment).apply(

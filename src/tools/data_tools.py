@@ -21,7 +21,7 @@ class DataQueryTool:
             # Apply filters
             if 'filters' in plan and plan['filters']:
                 for filter_condition in plan['filters']:
-                    column = filter_condition['column']
+                    column = data_loader.resolve_column(filter_condition['column'])
                     operator = filter_condition['operator']
                     value = filter_condition['value']
                     
@@ -42,9 +42,10 @@ class DataQueryTool:
             
             # Apply grouping and aggregations
             if 'groupby' in plan and plan['groupby']:
+                plan['groupby'] = [data_loader.resolve_column(c) for c in plan['groupby']]
                 agg_dict = {}
                 for agg in plan.get('aggregations', []):
-                    col = agg['column']
+                    col = data_loader.resolve_column(agg['column'])
                     func = agg['function']
                     alias = agg.get('alias', f"{func}_{col}")
                     agg_dict[alias] = (col, func)
