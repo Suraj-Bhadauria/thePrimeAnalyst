@@ -123,7 +123,7 @@ def _build_thought_html(thought_events):
     }
     STATUS_INDICATORS = {
         "started":   '<span class="tp-status tp-running">⟳ Running</span>',
-        "detail":    "",
+        "detail":    '<span class="tp-status tp-running">⟳ Running</span>',
         "completed": '<span class="tp-status tp-done">✓ Done</span>',
         "error":     '<span class="tp-status tp-error">✗ Error</span>',
     }
@@ -202,12 +202,45 @@ def stream_ai_response(user_query, workflow=None):
     content_display = st.empty()
     
     def thinking_callback(event):
-        """Called by the workflow at each step transition."""
-        thought_events.append(event)
-        # Re-render the entire thought process HTML on every event
-        html = _build_thought_html(thought_events)
-        with reasoning_display:
-            st.markdown(html, unsafe_allow_html=True)
+        """Called by the workflow at each step transition. Streams detail word-by-word."""
+        detail = event.get("detail", "")
+        final_status = event.get("status", "detail")
+        final_metadata = event.get("metadata", {})
+
+        if detail:
+            words = detail.split(" ")
+            event_id = f"evt_{event.get('step', 0)}_{time.time()}"
+
+            for i in range(1, len(words) + 1):
+                is_final = (i == len(words))
+                streamed = {
+                    "step": event.get("step", 0),
+                    "title": event.get("title", ""),
+                    "status": final_status if is_final else (
+                        "detail" if final_status in ("completed", "error") else final_status
+                    ),
+                    "detail": " ".join(words[:i]),
+                    "metadata": final_metadata if is_final else {},
+                    "timestamp": time.time(),
+                    "_event_id": event_id,
+                }
+                # Update in place if continuing same streaming sequence, else append
+                if thought_events and thought_events[-1].get("_event_id") == event_id:
+                    thought_events[-1] = streamed
+                else:
+                    thought_events.append(streamed)
+
+                html = _build_thought_html(thought_events)
+                with reasoning_display:
+                    st.markdown(html, unsafe_allow_html=True)
+
+                if not is_final:
+                    time.sleep(0.04)
+        else:
+            thought_events.append(event)
+            html = _build_thought_html(thought_events)
+            with reasoning_display:
+                st.markdown(html, unsafe_allow_html=True)
     
     if workflow:
         try:

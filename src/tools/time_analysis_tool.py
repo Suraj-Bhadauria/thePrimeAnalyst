@@ -1076,6 +1076,8 @@ def create_time_analysis_tool() -> StructuredTool:
             "For ALL time-based and temporal analysis of transaction data. "
             "Use this for questions about peak hours, hourly patterns, day-of-week trends, "
             "weekend vs weekday comparisons, time-series trends, and heatmap data. "
+            "Supports filters on any column including receiver_bank, receiver_age_group, "
+            "merchant_category, day_of_week, is_weekend. "
             "Input: analysis_type (string: peak_hours, hourly_distribution, day_of_week_pattern, "
             "weekend_vs_weekday, time_trend, peak_hours_by_category, failure_heatmap_data, "
             "hourly_comparison) and parameters (JSON string with optional filters, metric, "

@@ -82,13 +82,16 @@ class DataLoader:
     # Column alias map: common shorthand → actual column name
     COLUMN_ALIASES: dict = {
         "bank": "sender_bank",
+        "sender_age": "sender_age_group",
         "age_group": "sender_age_group",
         "age": "sender_age_group",
+        "receiver_age": "receiver_age_group",
         "state": "sender_state",
         "status": "transaction_status",
         "amount": "amount_inr",
         "type": "transaction_type",
         "category": "merchant_category",
+        "merchant": "merchant_category",
         "device": "device_type",
         "network": "network_type",
         "fraud": "fraud_flag",

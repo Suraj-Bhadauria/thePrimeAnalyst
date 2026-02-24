@@ -36,17 +36,17 @@ class DateQueryInput(BaseModel):
     query_type: str = Field(
         description=(
             "Type of date query: single_date, date_range, month_breakdown, "
-            "date_comparison, date_ranking, calendar_context, relative_date, "
-            "date_distribution, weekday_vs_weekend_by_date, date_anomaly"
+            "month_comparison, date_comparison, date_ranking, calendar_context, "
+            "relative_date, date_distribution, weekday_vs_weekend_by_date, date_anomaly"
         )
     )
     parameters: str = Field(
         description=(
             "JSON string with date specifications and options: date, start_date, "
-            "end_date, month, year, dates_list, reference_date, relative_period, "
-            "date_format, metric, filters, top_n, include_hourly_breakdown, "
-            "include_transaction_type_breakdown, include_benchmarks, "
-            "anomaly_threshold_multiplier"
+            "end_date, month, year, dates_list, months_list, reference_date, "
+            "relative_period, date_format, metric, filters, top_n, "
+            "include_hourly_breakdown, include_transaction_type_breakdown, "
+            "include_benchmarks, anomaly_threshold_multiplier"
         )
     )
 
@@ -212,6 +212,7 @@ class DateQueryTool:
             "date_range": self._query_date_range,
             "month_breakdown": self._query_month_breakdown,
             "month": self._query_month_breakdown,
+            "month_comparison": self._query_month_comparison,
             "date_comparison": self._query_date_comparison,
             "date_ranking": self._query_date_ranking,
             "calendar_context": self._query_calendar_context,
@@ -595,6 +596,258 @@ class DateQueryTool:
             ),
             date_parsed_as=f"{month_label}",
             fmt_detected="month/year",
+            parse_note="",
+        )
+
+    # ------------------------------------------------------------------
+    # month_comparison
+    # ------------------------------------------------------------------
+
+    def _query_month_comparison(self, params: Dict) -> str:
+        """Compare metrics between two or more months side by side."""
+        months_list_raw = params.get("months_list", [])
+        filters = params.get("filters", [])
+        include_benchmarks = params.get("include_benchmarks", True)
+
+        # ----------------------------------------------------------
+        # Parse months_list entries — accepts dicts or strings
+        # ----------------------------------------------------------
+        parsed_months: List[Tuple[int, int, str]] = []  # (month, year, label)
+
+        # If months_list is empty, try to extract from original_question
+        if not months_list_raw:
+            import re as _re
+            orig_q = params.get("original_question", "")
+            _month_names = {name.lower(): i for i, name in enumerate(calendar.month_name) if i}
+            _month_abbrs = {name.lower(): i for i, name in enumerate(calendar.month_abbr) if i}
+            all_months_map = {**_month_names, **_month_abbrs}
+            year_match = _re.search(r'\b(20\d{2})\b', orig_q)
+            default_year = int(year_match.group(1)) if year_match else None
+            found_months = []
+            for mname, mnum in sorted(all_months_map.items(), key=lambda x: -len(x[0])):
+                if mname in orig_q.lower():
+                    found_months.append(mnum)
+            # Deduplicate while preserving order
+            seen = set()
+            for m in found_months:
+                if m not in seen:
+                    seen.add(m)
+                    if default_year:
+                        months_list_raw.append({"month": m, "year": default_year})
+
+        if len(months_list_raw) < 2:
+            return self._error_response(
+                "month_comparison",
+                "months_list must contain at least 2 month specifications.",
+                "Provide months_list as a list of {month, year} dicts or 'Month YYYY' strings.",
+            )
+
+        for entry in months_list_raw[:7]:
+            if isinstance(entry, dict):
+                m = entry.get("month")
+                y = entry.get("year")
+                if m is not None and y is not None:
+                    m, y = int(m), int(y)
+                    label = f"{calendar.month_name[m]} {y}"
+                    parsed_months.append((m, y, label))
+                    continue
+            # String parsing: "January 2024", "Feb 2024", "2024-01", etc.
+            entry_str = str(entry).strip()
+            # Try "YYYY-MM" format
+            import re as _re
+            ym_match = _re.match(r'^(\d{4})[-/](\d{1,2})$', entry_str)
+            if ym_match:
+                y, m = int(ym_match.group(1)), int(ym_match.group(2))
+                label = f"{calendar.month_name[m]} {y}"
+                parsed_months.append((m, y, label))
+                continue
+            # Try month name + year
+            _month_names = {name.lower(): i for i, name in enumerate(calendar.month_name) if i}
+            _month_abbrs = {name.lower(): i for i, name in enumerate(calendar.month_abbr) if i}
+            all_months_map = {**_month_names, **_month_abbrs}
+            entry_lower = entry_str.lower()
+            found = False
+            for mname, mnum in all_months_map.items():
+                if mname in entry_lower:
+                    ym = _re.search(r'\b(20\d{2})\b', entry_lower)
+                    if ym:
+                        y = int(ym.group(1))
+                        label = f"{calendar.month_name[mnum]} {y}"
+                        parsed_months.append((mnum, y, label))
+                        found = True
+                        break
+            if not found:
+                return self._error_response(
+                    "month_comparison",
+                    f"Could not parse month specification: '{entry}'",
+                    "Use format like 'January 2024' or {{month: 1, year: 2024}}.",
+                )
+
+        if len(parsed_months) < 2:
+            return self._error_response(
+                "month_comparison",
+                "Need at least 2 valid months to compare.",
+                "Provide months_list with at least 2 entries.",
+            )
+
+        # ----------------------------------------------------------
+        # Compute metrics per month
+        # ----------------------------------------------------------
+        month_metrics: List[Dict[str, Any]] = []
+        for m, y, label in parsed_months:
+            _, last_day = calendar.monthrange(y, m)
+            start = date(y, m, 1)
+            end = date(y, m, last_day)
+            df_month = self._filter_to_date_range(start, end, filters)
+            total_txn = len(df_month)
+            total_amount = round(float(df_month["amount_inr"].sum()), 2) if total_txn > 0 else 0.0
+
+            dates_with_data = [d for d in self.all_dates if start <= d <= end]
+            days_in_month = last_day
+            days_with_data = len(dates_with_data)
+
+            # Daily average
+            daily_avg = round(total_txn / max(days_with_data, 1), 2)
+
+            # Status breakdown
+            if total_txn > 0:
+                status_counts = df_month["transaction_status"].value_counts()
+                success = int(status_counts.get("SUCCESS", 0))
+                failed = int(status_counts.get("FAILED", 0))
+                pending = int(status_counts.get("PENDING", 0))
+                success_rate = round(success / total_txn * 100, 2)
+                failure_rate = round(failed / total_txn * 100, 2)
+                avg_amount = round(float(df_month["amount_inr"].mean()), 2)
+                fraud_count = int(df_month["fraud_flag"].sum())
+                fraud_rate = round(fraud_count / total_txn * 100, 2)
+            else:
+                success = failed = pending = fraud_count = 0
+                success_rate = failure_rate = fraud_rate = avg_amount = 0.0
+
+            month_metrics.append({
+                "month_label": label,
+                "month": m,
+                "year": y,
+                "total_transactions": total_txn,
+                "total_transactions_formatted": f"{total_txn:,}",
+                "total_amount_inr": total_amount,
+                "days_in_month": days_in_month,
+                "days_with_data": days_with_data,
+                "daily_avg_transactions": daily_avg,
+                "success_count": success,
+                "success_rate_pct": success_rate,
+                "failed_count": failed,
+                "failure_rate_pct": failure_rate,
+                "pending_count": pending,
+                "avg_amount_inr": avg_amount,
+                "fraud_count": fraud_count,
+                "fraud_rate_pct": fraud_rate,
+            })
+
+        # ----------------------------------------------------------
+        # Build comparison table
+        # ----------------------------------------------------------
+        metric_keys = [
+            "total_transactions", "daily_avg_transactions", "success_rate_pct",
+            "failure_rate_pct", "fraud_rate_pct", "total_amount_inr", "avg_amount_inr",
+        ]
+        comparison_table: Dict[str, Dict[str, Any]] = {}
+        winner_per_metric: Dict[str, str] = {}
+        for mk in metric_keys:
+            row: Dict[str, Any] = {}
+            best_val = None
+            best_label = None
+            for mm in month_metrics:
+                val = mm.get(mk, 0)
+                row[mm["month_label"]] = val
+                if mk in ("failure_rate_pct", "fraud_rate_pct"):
+                    if best_val is None or val < best_val:
+                        best_val = val
+                        best_label = mm["month_label"]
+                else:
+                    if best_val is None or val > best_val:
+                        best_val = val
+                        best_label = mm["month_label"]
+            comparison_table[mk] = row
+            winner_per_metric[mk] = best_label
+
+        # Pairwise differences
+        vs_each: Dict[str, Dict[str, Any]] = {}
+        for i in range(len(month_metrics)):
+            for j in range(i + 1, len(month_metrics)):
+                mi, mj = month_metrics[i], month_metrics[j]
+                ci, cj = mi["total_transactions"], mj["total_transactions"]
+                diff = ci - cj
+                pct = round(abs(diff) / max(cj, 1) * 100, 1) if cj else 0.0
+                key = f"{mi['month_label']} vs {mj['month_label']}"
+                vs_each[key] = {
+                    "absolute_difference": diff,
+                    "percentage_difference": pct,
+                    "higher": mi["month_label"] if diff > 0 else mj["month_label"],
+                }
+
+        # Head-to-head summary for 2 months
+        head_to_head = None
+        if len(parsed_months) == 2:
+            m1, m2 = month_metrics[0], month_metrics[1]
+            c1, c2 = m1["total_transactions"], m2["total_transactions"]
+            diff = c1 - c2
+            pct_diff = round(abs(diff) / max(c2, 1) * 100, 1)
+            higher = m1["month_label"] if diff > 0 else m2["month_label"]
+            head_to_head = (
+                f"{m1['month_label']} had {c1:,} transactions vs {m2['month_label']} with {c2:,} — "
+                f"a difference of {abs(diff):,} ({pct_diff}% higher in {higher})."
+            )
+
+        # Busiest / quietest
+        counts = [(mm["month_label"], mm["total_transactions"]) for mm in month_metrics]
+        overall_busiest = max(counts, key=lambda x: x[1])
+        overall_quietest = min(counts, key=lambda x: x[1])
+
+        headline = self._generate_headline_answer(
+            "month_comparison",
+            months_info=[(mm["month_label"], mm["total_transactions"]) for mm in month_metrics],
+        )
+
+        scope_str = f"Comparing {len(parsed_months)} months: {', '.join(l for _, _, l in parsed_months)}"
+
+        return self._wrap_response(
+            success=True,
+            query_type="month_comparison",
+            date_scope=scope_str,
+            filters_applied=filters,
+            date_not_in_dataset=False,
+            primary_result={
+                "month_metrics": {mm["month_label"]: mm for mm in month_metrics},
+                "comparison_table": comparison_table,
+                "winner_per_metric": winner_per_metric,
+            },
+            hourly_breakdown=None,
+            include_benchmarks=include_benchmarks,
+            mode_specific_output={
+                "pairwise_comparison": vs_each,
+                "head_to_head_summary": head_to_head,
+                "busiest_month": {"month": overall_busiest[0], "count": overall_busiest[1]},
+                "quietest_month": {"month": overall_quietest[0], "count": overall_quietest[1]},
+            },
+            headline_answer=headline,
+            key_finding=(
+                f"Compared {len(parsed_months)} months: "
+                + ", ".join(f"{mm['month_label']} ({mm['total_transactions']:,} txns)" for mm in month_metrics)
+                + f". {overall_busiest[0]} was the busiest with {overall_busiest[1]:,} transactions."
+            ),
+            date_context_statement=head_to_head or scope_str,
+            above_or_below="",
+            executive_narrative=(
+                f"Month comparison across {len(parsed_months)} months. "
+                + " ".join(
+                    f"{mm['month_label']}: {mm['total_transactions']:,} transactions, "
+                    f"₹{mm['total_amount_inr']:,.2f} total, {mm['success_rate_pct']:.1f}% success rate."
+                    for mm in month_metrics
+                )
+            ),
+            date_parsed_as=", ".join(l for _, _, l in parsed_months),
+            fmt_detected="month/year list",
             parse_note="",
         )
 
@@ -1906,6 +2159,21 @@ class DateQueryTool:
             parts = [f"{d}: {c:,}" for d, c in infos]
             return "Transaction counts — " + ", ".join(parts) + "."
 
+        if query_type == "month_comparison":
+            infos = kwargs.get("months_info", [])
+            if len(infos) == 2:
+                m1, c1 = infos[0]
+                m2, c2 = infos[1]
+                diff = abs(c1 - c2)
+                higher = m1 if c1 > c2 else m2
+                pct = round(diff / max(min(c1, c2), 1) * 100, 1)
+                return (
+                    f"{m1} had {c1:,} transactions vs {m2} with {c2:,} — "
+                    f"a difference of {diff:,} ({pct}% higher in {higher})."
+                )
+            parts = [f"{m}: {c:,}" for m, c in infos]
+            return "Month transaction counts — " + ", ".join(parts) + "."
+
         if query_type == "date_ranking":
             top = kwargs.get("top_date")
             bottom = kwargs.get("bottom_date")
@@ -2077,12 +2345,15 @@ def create_date_query_tool() -> StructuredTool:
         description=(
             "Use this tool for ALL questions involving specific calendar dates, date ranges, "
             "months, or any query where the user mentions an actual date like '2024-12-30' or "
-            "'December' or 'last week.' This is the ONLY tool in the system that can filter by "
-            "calendar date — no other tool can do this. Use query_type 'single_date' for specific "
-            "date questions, 'date_range' for date spans, 'month_breakdown' for month queries, "
-            "'date_comparison' for comparing specific dates, 'date_ranking' for finding busiest/"
-            "quietest dates. Input: query_type (string) and parameters (JSON string with date, "
-            "start_date, end_date, month, year, metric, filters, include_hourly_breakdown)."
+            "'December' or 'last week.' This is the ONLY tool that can filter by calendar date. "
+            "Supports filters on any column (receiver_bank, receiver_age_group, merchant_category, "
+            "day_of_week, is_weekend, etc.). "
+            "Use query_type 'single_date' for specific date questions, 'date_range' for date spans, "
+            "'month_breakdown' for single month queries, 'month_comparison' for comparing two or more "
+            "months side by side (e.g. January vs February), 'date_comparison' for comparing specific "
+            "dates, 'date_ranking' for finding busiest/quietest dates. Input: query_type (string) and "
+            "parameters (JSON string with date, start_date, end_date, month, year, months_list, metric, "
+            "filters, include_hourly_breakdown)."
         ),
         args_schema=DateQueryInput,
     )

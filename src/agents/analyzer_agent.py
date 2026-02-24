@@ -13,6 +13,7 @@ from src.tools.trend_tool import create_trend_tool
 from src.tools.network_graph_tool import create_network_graph_tool
 from src.tools.transaction_resolver_tool import create_transaction_resolver_tool
 from src.tools.date_query_tool import create_date_query_tool
+from src.tools.correlation_tool import create_correlation_tool
 import json
 
 class AnalyzerAgent:
@@ -28,8 +29,9 @@ class AnalyzerAgent:
         self.network_graph_tool = create_network_graph_tool()
         self.transaction_resolver_tool = create_transaction_resolver_tool()
         self.date_query_tool = create_date_query_tool()
+        self.correlation_tool = create_correlation_tool()
         
-        self.tools = [self.data_tool, self.stats_tool, self.time_tool, self.comparison_tool, self.ranking_tool, self.multi_metric_tool, self.trend_tool, self.network_graph_tool, self.transaction_resolver_tool, self.date_query_tool]
+        self.tools = [self.data_tool, self.stats_tool, self.time_tool, self.comparison_tool, self.ranking_tool, self.multi_metric_tool, self.trend_tool, self.network_graph_tool, self.transaction_resolver_tool, self.date_query_tool, self.correlation_tool]
         
         # Create a lookup dict for tool execution
         self.tool_map = {
@@ -42,7 +44,8 @@ class AnalyzerAgent:
             "trend_tool": self.trend_tool,
             "network_graph_tool": self.network_graph_tool,
             "transaction_resolver_tool": self.transaction_resolver_tool,
-            "date_query_tool": self.date_query_tool
+            "date_query_tool": self.date_query_tool,
+            "correlation_importance_tool": self.correlation_tool
         }
 
         self.llm = ChatGroq(
@@ -69,7 +72,7 @@ Available tools:
 - multi_metric_tool: For ALL multi-KPI questions requiring several metrics at once on the same dataset. Use this for "complete picture," "full snapshot," "health check," "overall performance," "give me all metrics," "how is X performing," and any question that would otherwise require multiple separate tool calls. Computes count, average amount, failure rate, fraud rate, success rate, and 20+ more metrics in a single pass. Input: analysis_mode (string: snapshot, grouped_snapshot, multi_group_snapshot, segment_profile, health_scorecard, transaction_type_profile, temporal_snapshot, funnel_analysis, anomaly_snapshot, comparative_snapshot) and parameters (JSON string with filters, group_by, include_benchmarks, metrics_to_include).
 - trend_tool: For ALL time-series and trend questions. Use this when questions involve how a metric changes over time, whether something is increasing or decreasing, trend direction, patterns across hours or days, trajectory analysis, or SMA smoothing. Use this for questions containing words like "trend," "over time," "increasing," "decreasing," "pattern," "trajectory," "moving average," "how does X change," "getting better/worse," "rising/falling," and "across the day/week." Input: trend_type (string: hourly_trend, daily_trend, date_trend, multi_metric_trend, segmented_trend, rolling_anomaly_trend, acceleration_trend, comparative_period_trend, cumulative_trend, volatility_trend) and parameters (JSON string with metric, time_granularity, smoothing_window, smoothing_method, filters, segment_column, segment_values, secondary_metrics, include_forecast, period_a_filter, period_b_filter, period_a_label, period_b_label).
 - network_graph_tool: For ALL P2P network relationship analysis, money flow graph analysis, cycle detection, round-tripping detection, money mule identification, hub detection, centrality analysis, community detection, and PageRank analysis. Use this when questions involve P2P money flow patterns, circular transactions, suspicious sender-receiver relationships, network structure, or graph-based fraud detection. This tool exclusively analyzes P2P transactions — it automatically filters to transaction_type == 'P2P' before building the graph. For non-P2P transaction analysis, use other tools. Input: graph_analysis_type (string: graph_overview, cycle_detection, degree_centrality, hub_identification, flow_analysis, community_detection, path_analysis, temporal_graph_analysis, pagerank_analysis, composite_fraud_graph) and parameters (JSON string with time_window_hours, top_n_hubs, min_cycle_length, max_cycle_length, filters, include_amount_weights, status_filter, min_transaction_count, centrality_threshold, pagerank_damping, community_resolution, node_a, node_b).
-- date_query_tool: Use this tool for ALL questions involving specific calendar dates, date ranges, months, or any query where the user mentions an actual date like '2024-12-30' or 'December' or 'last week.' This is the ONLY tool in the system that can filter by calendar date — no other tool can do this. Use query_type 'single_date' for specific date questions, 'date_range' for date spans, 'month_breakdown' for month queries, 'date_comparison' for comparing specific dates, 'date_ranking' for finding busiest/quietest dates, 'calendar_context' for date context and peer comparisons, 'relative_date' for relative time references, 'date_distribution' for volume distribution, 'weekday_vs_weekend_by_date' for weekend vs weekday by actual dates, 'date_anomaly' for unusual days. Input: query_type (string) and parameters (JSON string with date, start_date, end_date, month, year, dates_list, reference_date, relative_period, metric, filters, include_hourly_breakdown).
+- date_query_tool: Use this tool for ALL questions involving specific calendar dates, date ranges, months, or any query where the user mentions an actual date like '2024-12-30' or 'December' or 'last week.' This is the ONLY tool in the system that can filter by calendar date — no other tool can do this. Use query_type 'single_date' for specific date questions, 'date_range' for date spans, 'month_breakdown' for single month queries, 'month_comparison' for comparing two or more months side by side (e.g. 'January vs February 2024', 'compare Q1 months'), 'date_comparison' for comparing specific dates, 'date_ranking' for finding busiest/quietest dates, 'calendar_context' for date context and peer comparisons, 'relative_date' for relative time references, 'date_distribution' for volume distribution, 'weekday_vs_weekend_by_date' for weekend vs weekday by actual dates, 'date_anomaly' for unusual days. Input: query_type (string) and parameters (JSON string with date, start_date, end_date, month, year, months_list, dates_list, reference_date, relative_period, metric, filters, include_hourly_breakdown).
 - transaction_resolver_tool: Use this WHENEVER a user asks for actual transaction IDs, specific transaction records, raw evidence behind a finding, or drill-down details after any prior analysis. This is the ONLY tool that returns individual transaction rows and IDs. Use resolution_mode "context_aware_resolver" when the user asks "show me the transactions" or "give me the IDs" after a prior tool output — pass the prior output as prior_tool_output parameter. Use "criteria_based" for direct filtering requests. Use "profile_based_resolver" for natural language transaction descriptions. NEVER return empty transaction lists — if no transactions match, explain why and suggest alternative criteria. Input: resolution_mode (string) and parameters (JSON string with filters, top_n, sort_by, prior_tool_output, prior_tool_name, user_intent, node_id, cycle_nodes, community_id).
 
 CRITICAL ANTI-HALLUCINATION RULE: When a user asks for transaction IDs or specific transactions after a prior analysis, ALWAYS call transaction_resolver_tool before generating a response. NEVER generate transaction IDs, amounts, or transaction details from memory or inference — only report what transaction_resolver_tool actually returns. If the tool returns zero transactions, report zero and explain why — never invent transaction data.
@@ -98,6 +101,7 @@ Tool Selection Guidelines:
 - For share-of-wallet or value distribution across segments → use ranking_tool
 - For fraud or failure ranking across segments → use ranking_tool
 - For ANY question mentioning a specific date (YYYY-MM-DD, 'December 30', 'on that day', 'this month', 'in December', 'daily count', 'how many on', 'transactions on', 'what happened on', 'last week', 'yesterday', a 4-digit year, a month name) → ALWAYS use date_query_tool FIRST
+- For comparing two or more months (e.g. 'January vs February 2024', 'compare months') → use date_query_tool with query_type='month_comparison' and months_list parameter
 - For general data queries without time, comparison, or ranking focus → use query_transaction_data
 - For statistical tests (correlation, distribution) without time, comparison, or ranking focus → use statistical_analysis
 - For ANY question needing multiple metrics at once (snapshot, health check, full picture, overall performance, dashboard, scorecard, funnel, profile, anomaly check, executive summary) → use multi_metric_tool
@@ -211,6 +215,17 @@ Anti-Redundancy Rule: When a question requires 3 or more metrics about the same 
                                           'show me the actual', 'underlying transactions',
                                           'transaction_id', 'txn id', 'show the records',
                                           'retrieve transactions', 'get transactions']
+        correlation_keywords = [
+            'what drives', 'what factors', 'which factors', 'most influence',
+            'most influential', 'feature importance', 'what predicts', 'what causes',
+            'strongest predictor', 'cramers', "cramer's", 'cramér', 'association matrix',
+            'interaction between', 'interaction effect', 'does x affect',
+            'combination of', 'riskiest combination', 'worst combination',
+            'which bank and device', 'multivariate', 'point biserial',
+            'amount correlate', 'amount and fraud', 'higher value transactions',
+            'what combination', 'which combination', 'rank the factors',
+            'rank factors', 'rank columns', 'which column', 'which columns predict'
+        ]
         plan_str = json.dumps(execution_plan).lower()
         is_date_query = any(keyword in plan_str for keyword in date_query_keywords)
         # Also detect date patterns (YYYY-MM-DD, DD/MM/YYYY, etc.)
@@ -218,6 +233,7 @@ Anti-Redundancy Rule: When a question requires 3 or more metrics about the same 
         is_date_query = is_date_query or bool(_re.search(r'\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b', plan_str))
         is_date_query = is_date_query or bool(_re.search(r'\b\d{1,2}[-/]\d{1,2}[-/]\d{4}\b', plan_str))
         is_transaction_resolver_query = any(keyword in plan_str for keyword in transaction_resolver_keywords)
+        is_correlation_query = any(keyword in plan_str for keyword in correlation_keywords)
         is_trend_query = any(keyword in plan_str for keyword in trend_keywords)
         is_time_query = any(keyword in plan_str for keyword in time_keywords)
         is_comparison_query = any(keyword in plan_str for keyword in comparison_keywords)
@@ -231,6 +247,7 @@ Use the date_query_tool for this analysis. Choose the appropriate query_type:
 - single_date: Retrieve all metrics for one specific calendar date (e.g. 'how many transactions on 2024-12-30')
 - date_range: Aggregated and day-by-day metrics across a span of dates
 - month_breakdown: Full day-by-day breakdown for an entire month
+- month_comparison: Compare metrics between two or more months side by side (e.g. 'January vs February 2024'). Parameters: months_list (list of {month, year} dicts or 'Month YYYY' strings)
 - date_comparison: Compare metrics between two or more specific dates side by side
 - date_ranking: Rank all dates by a chosen metric (busiest/quietest days)
 - calendar_context: Full calendar context for a date with peer comparisons
@@ -239,7 +256,8 @@ Use the date_query_tool for this analysis. Choose the appropriate query_type:
 - weekday_vs_weekend_by_date: Compare actual weekend vs weekday dates in a range
 - date_anomaly: Identify dates with unusual metric deviations
 
-Parameters JSON should include: date (string), start_date, end_date, month (int), year (int), dates_list (list), reference_date, relative_period, metric, filters (list), top_n (int), include_hourly_breakdown (bool), include_benchmarks (bool), anomaly_threshold_multiplier (float).
+Parameters JSON should include: date (string), start_date, end_date, month (int), year (int), months_list (list of {month, year} dicts or 'Month YYYY' strings), dates_list (list), reference_date, relative_period, metric, filters (list), top_n (int), include_hourly_breakdown (bool), include_benchmarks (bool), anomaly_threshold_multiplier (float).
+For month-vs-month comparisons (e.g. 'January vs February 2024'), use query_type='month_comparison' with months_list=[{"month":1,"year":2024},{"month":2,"year":2024}].
 This is the ONLY tool that can filter by actual calendar dates. Do NOT use time_analysis_tool or trend_tool for date-specific queries.
 """
         elif is_transaction_resolver_query:
@@ -351,6 +369,23 @@ Use the comparison_tool for this analysis. Choose the appropriate comparison_typ
 - bank_vs_bank: Deep bank comparison with breakdowns by txn type and device
 - device_network_matrix: Full device × network matrix with hotspot detection
 """
+        elif is_correlation_query:
+            routing_hint = """\n\n**IMPORTANT**: This query asks for correlation, feature importance, or factor analysis.
+Use the correlation_importance_tool. Choose the appropriate analysis_type:
+- feature_importance: Rank all factors by their association with failure/fraud/success rate. 
+  Parameters: target (failure/fraud/success), filters (list)
+- cramers_v_matrix: Full pairwise Cramér's V association matrix across all categorical columns.
+  Parameters: include_geography (bool), filters (list)
+- interaction_effects: Detect how two factors interact to affect the target rate.
+  Parameters: factor_a (column), factor_b (column), target, filters, min_sample_size
+- multivariate_combination: Find riskiest/safest combinations of 2-4 factors simultaneously.
+  Parameters: factors (list of columns), target, top_n, min_sample_size, filters
+- point_biserial: Correlation between amount_inr and a binary outcome (fraud/failure).
+  Parameters: continuous_var (default amount_inr), binary_target, filters, include_distribution, segment_by
+
+Parameters JSON should include: target (string), filters (list), factor_a, factor_b, factors (list), 
+top_n (int), min_sample_size (int), include_geography (bool), segment_by (string).
+"""
         else:
             routing_hint = ""
 
@@ -436,7 +471,7 @@ Use the most appropriate tool based on the analysis requirements.
                 "comparative": "comparison_tool",
                 "temporal": "time_analysis_tool",
                 "segmentation": "ranking_tool",
-                "correlation": "statistical_analysis",
+                "correlation": "correlation_importance_tool",
                 "risk_analysis": "statistical_analysis",
                 "trend": "trend_tool",
                 "date_query": "date_query_tool",
@@ -627,6 +662,34 @@ Use the most appropriate tool based on the analysis requirements.
             params = {"filters": filters, "date": date_ref, "original_question": plan.get("original_question", "")}
             # For month_breakdown, also extract explicit month/year into params
             query_subtype = plan.get("date_query_subtype", plan.get("tool_subtype", "single_date"))
+
+            # Auto-detect month comparison: if the original question compares
+            # two or more months (e.g. "January vs February 2024"), upgrade
+            # month_breakdown to month_comparison and build months_list.
+            orig_q = plan.get("original_question", "")
+            orig_q_lower = orig_q.lower()
+            import calendar as _cal_mc
+            _mc_month_map = {name.lower(): i for i, name in enumerate(_cal_mc.month_name) if i}
+            _mc_month_map.update({name.lower(): i for i, name in enumerate(_cal_mc.month_abbr) if i})
+            # Count distinct months mentioned
+            mentioned_months = []
+            _seen_months = set()
+            for mname, mnum in sorted(_mc_month_map.items(), key=lambda x: -len(x[0])):
+                if mname in orig_q_lower and mnum not in _seen_months:
+                    mentioned_months.append(mnum)
+                    _seen_months.add(mnum)
+            is_compare_query = any(kw in orig_q_lower for kw in [
+                " vs ", "versus", "compare", "comparison", "against",
+                "difference between", "compared to",
+            ])
+            if len(mentioned_months) >= 2 and (is_compare_query or query_subtype in ("month_breakdown", "single_date")):
+                # Extract year
+                ym_match = _re.search(r'\b(20\d{2})\b', orig_q)
+                default_year = int(ym_match.group(1)) if ym_match else 2024
+                months_list = [{"month": m, "year": default_year} for m in mentioned_months]
+                params["months_list"] = months_list
+                query_subtype = "month_comparison"
+
             if query_subtype == "month_breakdown" and date_ref:
                 import re as _re2
                 import calendar as _cal2
@@ -651,6 +714,45 @@ Use the most appropriate tool based on the analysis requirements.
         if tool_name == "statistical_analysis":
             params = {"filters": filters}
             return {"analysis_type": plan.get("tool_subtype", "distribution"),
+                     "parameters": json.dumps(params)}
+
+        if tool_name == "correlation_importance_tool":
+            subtype = plan.get("tool_subtype", "feature_importance")
+            target = plan.get("metric", "failure")
+            # Normalize target names
+            if target in ("failure_rate", "fail"):
+                target = "failure"
+            elif target in ("fraud_rate",):
+                target = "fraud"
+            elif target in ("success_rate",):
+                target = "success"
+            elif target not in ("failure", "fraud", "success"):
+                target = "failure"
+            params = {"target": target, "filters": filters}
+            if subtype == "interaction_effects":
+                params["factor_a"] = plan.get("segment_column", "device_type")
+                factor_b = plan.get("segment_b", plan.get("segment_a", "network_type"))
+                # If factor_b looks like a value rather than column, fallback
+                valid_cols = {"device_type", "network_type", "sender_bank", "sender_age_group",
+                              "sender_state", "transaction_type", "merchant_category"}
+                if factor_b not in valid_cols:
+                    factor_b = "network_type"
+                params["factor_b"] = factor_b
+                params["min_sample_size"] = 100
+            elif subtype == "multivariate_combination":
+                factors = plan.get("factors", None)
+                if not factors:
+                    factors = ["sender_bank", "device_type", "network_type"]
+                params["factors"] = factors
+                params["top_n"] = plan.get("limit", 15) or 15
+                params["min_sample_size"] = 200
+            elif subtype == "cramers_v_matrix":
+                params["include_geography"] = False
+            elif subtype == "point_biserial":
+                params["continuous_var"] = "amount_inr"
+                params["binary_target"] = target
+                params["include_distribution"] = True
+            return {"analysis_type": subtype,
                      "parameters": json.dumps(params)}
 
         # Generic fallback

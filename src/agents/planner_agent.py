@@ -68,7 +68,7 @@ INTENT_TO_TOOL_MAP = {
     "comparative": "comparison_tool",
     "temporal": "time_analysis_tool",
     "segmentation": "ranking_tool",
-    "correlation": "statistical_analysis",
+    "correlation": "correlation_importance_tool",
     "risk_analysis": "statistical_analysis",
     "trend": "trend_tool",
     "date_query": "date_query_tool",

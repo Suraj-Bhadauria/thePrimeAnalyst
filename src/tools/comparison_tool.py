@@ -655,7 +655,7 @@ class ComparisonTool:
             }
 
         # Age order for age groups
-        if col == "sender_age_group":
+        if col in ("sender_age_group", "receiver_age_group"):
             age_order = ["18-25", "26-35", "36-45", "46-55", "56+"]
             age_ordered = sorted(segments, key=lambda s: age_order.index(s["label"]) if s["label"] in age_order else 99)
             for seg in segments:
@@ -927,7 +927,7 @@ class ComparisonTool:
                 seg["is_cliff_point"] = False
 
         # Age ordering
-        if col == "sender_age_group":
+        if col in ("sender_age_group", "receiver_age_group"):
             age_order = ["18-25", "26-35", "36-45", "46-55", "56+"]
             for seg in segments:
                 seg["age_position"] = age_order.index(seg["label"]) + 1 if seg["label"] in age_order else None
@@ -1332,12 +1332,12 @@ def create_comparison_tool() -> StructuredTool:
         name="comparison_tool",
         description=(
             "For ALL segment comparison questions — A vs B, which is better, rank by metric, "
-            "cross-segment analysis. Use this for device comparisons, network comparisons, bank "
-            "comparisons, age group comparisons, state comparisons, and any 'compare X to Y' question. "
-            "Input: comparison_type (string: head_to_head, multi_segment, cross_segment, "
-            "metric_comparison, conditional_comparison, ranked_comparison, bank_vs_bank, "
-            "device_network_matrix) and parameters (JSON string with segment_column, segment_a, "
-            "segment_b, metric, filters, include_statistical_tests, confidence_level, top_n)."
+            "cross-segment analysis. Works with any column as segment: sender/receiver bank, "
+            "sender/receiver age_group, state, merchant_category, device_type, network_type, "
+            "day_of_week, is_weekend. Input: comparison_type (string: head_to_head, multi_segment, "
+            "cross_segment, metric_comparison, conditional_comparison, ranked_comparison, "
+            "bank_vs_bank, device_network_matrix) and parameters (JSON string with segment_column, "
+            "segment_a, segment_b, metric, filters, include_statistical_tests, confidence_level, top_n)."
         ),
         args_schema=ComparisonInput,
     )
