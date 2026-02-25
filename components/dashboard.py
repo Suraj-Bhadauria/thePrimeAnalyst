@@ -1,3 +1,12 @@
+"""
+Dashboard Component for Prime Analyst
+High-end analytics dashboard with earthy professional theme.
+Features:
+- Dynamic data loading
+- PDF Export with Charts
+- Unified Layout
+"""
+
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
@@ -6,8 +15,6 @@ import numpy as np
 import tempfile
 import os
 from components.styles import get_dashboard_css
-from components.ui_config import COLORS, COLOR_SEQUENCE, DASHBOARD_CONFIG
-from src.utils.data_loader import data_loader
 
 # Try importing PDF libraries
 try:
@@ -15,97 +22,64 @@ try:
     HAS_PDF_LIBS = True
 except ImportError:
     HAS_PDF_LIBS = False
+    # Create a dummy base class so PDFReport definition doesn't crash at import
+    class FPDF:
+        pass
 
 # ==========================================
-# DATA LOADING FROM REAL TRANSACTION DATA
+# CONFIG & STYLE CONSTANTS
+# ==========================================
+
+# Earthy Color Palette
+COLORS = {
+    "primary":   "#4A3B32",
+    "secondary": "#6B5F52",
+    "accent":    "#2563EB",
+    "success":   "#4A7C59",
+    "warning":   "#C17F24",
+    "danger":    "#B44C3A",
+    "upi":       "#C2673A",
+    "rupay":     "#5C7A3E",
+    "bg":        "#F2F1EF",
+    "card":      "#F9F8F6",
+}
+
+CHART_COLORS_BROWN = [
+    "#4A3B32", "#6B5F52", "#8C7B6E", "#A89890",
+    "#B5A99F", "#C9BFB8", "#D9D0CA", "#F2F1EF",
+]
+
+FRAUD_HEATMAP_SCALE = [
+    "#F2F1EF","#D4B896","#8C7B6E", "#C2673A", "#B44C3A", "#4A3B32",
+]
+
+DIVERGING_SCALE = [
+    "rgba(180, 76, 58, 1)",
+    "rgba(180, 76, 58, 0.4)",
+    "rgba(242, 241, 239, 1)",
+    "rgba(74, 124, 89, 0.4)",
+    "rgba(74, 124, 89, 1)",
+]
+
+
+# ==========================================
+# DATA LOADING INTERFACE
 # ==========================================
 
 def get_dashboard_data():
     """
-    Fetches dashboard data from real transaction CSV.
-    Returns aggregated metrics and data for visualization.
+    Fetches dashboard data.
+    Priority 1: MockData from test_ui.py (for dev/demo)
+    Priority 2: Returns empty template structure (for production integration)
     """
     try:
-        # Load real transaction data
-        df = data_loader.load_data()
-        
-        # Calculate KPIs
-        total_txns = len(df)
-        success_txns = len(df[df['transaction_status'] == 'SUCCESS'])
-        success_rate = (success_txns / total_txns * 100) if total_txns > 0 else 0
-        total_revenue = df['amount_inr'].sum()
-        fraud_count = df['fraud_flag'].sum() if 'fraud_flag' in df.columns else 0
-        fraud_rate = (fraud_count / total_txns * 100) if total_txns > 0 else 0
-        avg_txn = df['amount_inr'].mean()
-        
-        # Get unique merchants/categories
-        active_merchants = df['merchant_category'].nunique() if 'merchant_category' in df.columns else 0
-        
-        kpis = [
-            {"label": "Total Transactions", "value": f"{total_txns:,}", "delta": "+12.5%", "trend": "up"},
-            {"label": "Success Rate", "value": f"{success_rate:.1f}%", "delta": "+2.3%", "trend": "up"},
-            {"label": "Total Revenue", "value": f"₹{total_revenue/1e6:.2f}M", "delta": "+8.7%", "trend": "up"},
-            {"label": "Fraud Rate", "value": f"{fraud_rate:.2f}%", "delta": "-0.5%", "trend": "down"},
-            {"label": "Avg Transaction", "value": f"₹{avg_txn:.0f}", "delta": "+5.2%", "trend": "up"},
-            {"label": "Active Categories", "value": f"{active_merchants}", "delta": "+3", "trend": "up"}
-        ]
-        
-        # Trends over time
-        df_time = df.copy()
-        df_time['date'] = pd.to_datetime(df_time['timestamp']).dt.date
-        daily_stats = df_time.groupby('date').agg({
-            'transaction_id': 'count',
-            'transaction_status': lambda x: (x == 'SUCCESS').sum() / len(x) * 100
-        }).reset_index()
-        daily_stats.columns = ['date', 'volume', 'success_rate']
-        
-        trends = {
-            "dates": daily_stats['date'].astype(str).tolist(),
-            "volume": daily_stats['volume'].tolist(),
-            "success_rate": daily_stats['success_rate'].tolist()
-        }
-        
-        # Decline reasons (using failed transactions)
-        failed_df = df[df['transaction_status'] != 'SUCCESS']
-        decline_reasons = failed_df['transaction_status'].value_counts().to_dict() if len(failed_df) > 0 else {}
-        
-        # Platform/Device distribution
-        platforms = df['device_type'].value_counts().to_dict() if 'device_type' in df.columns else {}
-        
-        # Transaction status over time
-        status_time = df_time.groupby(['date', 'transaction_status']).size().unstack(fill_value=0).reset_index()
-        transaction_status = {
-            "dates": status_time['date'].astype(str).tolist(),
-            "approved": status_time.get('SUCCESS', []).tolist(),
-            "declined": status_time.drop(columns=['date', 'SUCCESS'], errors='ignore').sum(axis=1).tolist()
-        }
-        
-        # Risk meter (based on fraud rate)
-        risk_meter = {
-            "current_score": fraud_rate / 20,  # Scale 0-5
-            "max_score": 5,
-            "threshold": 4.5
-        }
-        
-        # Retention curve (mock for now, would need time-series customer data)
-        retention_curve = {
-            "weeks": list(range(1, 13)),
-            "values": [100 - (i * 5) for i in range(12)]
-        }
-        
-        return {
-            "kpis": kpis,
-            "trends": trends,
-            "decline_reasons": decline_reasons,
-            "platforms": platforms,
-            "transaction_status": transaction_status,
-            "risk_meter": risk_meter,
-            "retention_curve": retention_curve
-        }
-        
-    except Exception as e:
-        st.error(f"Error loading dashboard data: {str(e)}")
-        # Return empty structure on error
+        from test_ui import MockData
+        # Use the dynamic generator if available, else static
+        if hasattr(MockData, 'get_dashboard_data'):
+            return MockData.get_dashboard_data()
+        return MockData.DASHBOARD_DATA
+    except ImportError:
+        # PRODUCTION FALLBACK TEMPLATE
         return {
             "kpis": [],
             "trends": {"dates": [], "volume": [], "success_rate": []},
@@ -133,9 +107,9 @@ def create_trend_chart(data):
         x=df['Date'],
         y=df['Success Rate'],
         mode='lines',
-        line=dict(color=COLORS["sage"], width=3, shape='spline'),
+        line=dict(color=COLORS["primary"], width=3, shape='spline'),
         fill='tozeroy',
-        fillcolor=COLORS["sage_light"],
+        fillcolor="rgba(180, 76, 58, 0.05)",
         hovertemplate='<b>%{x|%b %d}</b><br>Success: %{y:.1f}%<extra></extra>'
     ))
     
@@ -161,7 +135,7 @@ def create_decline_chart(data):
         labels=labels,
         values=values,
         hole=0.6,
-        marker=dict(colors=COLOR_SEQUENCE),
+        marker=dict(colors=FRAUD_HEATMAP_SCALE[::-1]),
         textinfo='none', # Hides text on slices
         hovertemplate='<b>%{label}</b><br>%{percent}<extra></extra>'
     )])
@@ -230,8 +204,8 @@ def create_status_chart(data):
     declined = data["declined"]
     
     fig = go.Figure()
-    fig.add_trace(go.Bar(name='Approved', x=dates_short, y=approved, marker_color=COLORS["sage"]))
-    fig.add_trace(go.Bar(name='Declined', x=dates_short, y=declined, marker_color=COLORS["accent"]))
+    fig.add_trace(go.Bar(name='Approved', x=dates_short, y=approved, marker_color=COLORS["success"]))
+    fig.add_trace(go.Bar(name='Declined', x=dates_short, y=declined, marker_color=COLORS["danger"]))
     
     fig.update_layout(
         title=dict(text="Transaction Status", font=dict(size=14, color=COLORS["primary"])),
@@ -261,9 +235,9 @@ def create_risk_chart(data):
             'borderwidth': 2,
             'bordercolor': "gray",
             'steps': [
-                {'range': [0, 2], 'color': COLORS["sage"]},
-                {'range': [2, 4], 'color': COLORS["accent"]},
-                {'range': [4, 5], 'color': COLORS["red"]}],
+                {'range': [0, 2], 'color': COLORS["success"]},
+                {'range': [2, 4], 'color': COLORS["warning"]},
+                {'range': [4, 5], 'color': COLORS["danger"]}],
             'threshold': {
                 'line': {'color': "red", 'width': 4},
                 'thickness': 0.75,
@@ -287,8 +261,8 @@ def create_retention_chart(data):
     fig.add_trace(go.Scatter(
         x=data["weeks"], y=data["values"],
         mode='lines+markers',
-        line=dict(color=COLORS["blue"], width=3),
-        marker=dict(size=8, color=COLORS["primary"]),
+        line=dict(color=COLORS["warning"], width=3),
+        marker=dict(size=8, color=COLORS["danger"]),
         hovertemplate='%{y}% Retention<extra></extra>'
     ))
     
@@ -305,107 +279,101 @@ def create_retention_chart(data):
     return fig
 
 # ==========================================
-# PDF GENERATION (Optional Feature)
+# PDF GENERATION
 # ==========================================
 
-if HAS_PDF_LIBS:
-    class PDFReport(FPDF):
-        def header(self):
-            self.set_font('Arial', 'B', 16)
-            self.set_text_color(74, 59, 50) # Dark Brown
-            self.cell(0, 10, 'PayInsight AI - Payment Performance Report', 0, 1, 'L')
-            self.set_font('Arial', '', 10)
-            self.set_text_color(128, 128, 128)
-            self.cell(0, 10, f'Generated on {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")}', 0, 1, 'L')
-            self.ln(5)
+class PDFReport(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 16)
+        self.set_text_color(74, 59, 50) # Dark Brown
+        self.cell(0, 10, 'Prime Analyst - Payment Performance Report', 0, 1, 'L')
+        self.set_font('Arial', '', 10)
+        self.set_text_color(128, 128, 128)
+        self.cell(0, 10, f'Generated on {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")}', 0, 1, 'L')
+        self.ln(5)
 
-        def footer(self):
-            self.set_y(-15)
-            self.set_font('Arial', 'I', 8)
-            self.set_text_color(128, 128, 128)
-            self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.set_text_color(128, 128, 128)
+        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
-    def generate_pdf_report(data):
-        """
-        Generates a PDF report using FPDF and Plotly static image export.
-        Returns bytes of the PDF.
-        """
-        pdf = PDFReport()
-        pdf.add_page()
+def generate_pdf_report(data):
+    """
+    Generates a PDF report using FPDF and Plotly static image export.
+    Returns bytes of the PDF.
+    """
+    pdf = PDFReport()
+    pdf.add_page()
+    
+    # 1. ADD KPIS SUMMARY
+    pdf.set_font('Arial', 'B', 12)
+    pdf.set_text_color(74, 59, 50)
+    pdf.cell(0, 10, 'Key Performance Indicators', 0, 1, 'L')
+    pdf.set_font('Arial', '', 11)
+    
+    # Simple table-like structure for KPIs
+    col_width = pdf.w / 4.5
+    for kpi in data["kpis"]:
+        pdf.cell(col_width, 8, kpi["label"], 0, 0)
+    pdf.ln(8)
+    
+    pdf.set_font('Arial', 'B', 14)
+    for kpi in data["kpis"]:
+        pdf.cell(col_width, 10, kpi["value"], 0, 0)
+    pdf.ln(12)
+    
+    # 2. GENERATE AND EMBED CHARTS
+    # We create temporary files for the chart images
+    charts_to_render = [
+        (create_trend_chart(data["trends"]), create_decline_chart(data["decline_reasons"])),
+        (create_platform_chart(data["platforms"]), create_status_chart(data["transaction_status"])),
+        (create_risk_chart(data["risk_meter"]), create_retention_chart(data["retention_curve"]))
+    ]
+    
+    temp_files = []
+    
+    try:
+        y_pos = pdf.get_y() + 5
         
-        # 1. ADD KPIS SUMMARY
-        pdf.set_font('Arial', 'B', 12)
-        pdf.set_text_color(74, 59, 50)
-        pdf.cell(0, 10, 'Key Performance Indicators', 0, 1, 'L')
-        pdf.set_font('Arial', '', 11)
-        
-        # Simple table-like structure for KPIs
-        col_width = pdf.w / 4.5
-        for kpi in data["kpis"]:
-            pdf.cell(col_width, 8, kpi["label"], 0, 0)
-        pdf.ln(8)
-        
-        pdf.set_font('Arial', 'B', 14)
-        for kpi in data["kpis"]:
-            pdf.cell(col_width, 10, kpi["value"], 0, 0)
-        pdf.ln(12)
-        
-        # 2. GENERATE AND EMBED CHARTS
-        # We create temporary files for the chart images
-        charts_to_render = [
-            (create_trend_chart(data["trends"]), create_decline_chart(data["decline_reasons"])),
-            (create_platform_chart(data["platforms"]), create_status_chart(data["transaction_status"])),
-            (create_risk_chart(data["risk_meter"]), create_retention_chart(data["retention_curve"]))
-        ]
-        
-        temp_files = []
-        
-        try:
-            y_pos = pdf.get_y() + 5
+        for row_charts in charts_to_render:
+            # Check for page break
+            if y_pos > 200:
+                pdf.add_page()
+                y_pos = 20
             
-            for row_charts in charts_to_render:
-                # Check for page break
-                if y_pos > 200:
-                    pdf.add_page()
-                    y_pos = 20
-                
-                x_pos = 10
-                max_h = 0
-                
-                for fig in row_charts:
-                    try:
-                        # Convert plotly figure to static image (requires kaleido)
-                        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                            # Use scale=2 for better resolution
-                            fig.write_image(tmp.name, width=500, height=350, scale=2)
-                            temp_files.append(tmp.name)
-                            
-                            # Add to PDF
-                            # Width ~90mm per chart
-                            pdf.image(tmp.name, x=x_pos, y=y_pos, w=90)
-                            x_pos += 95
-                    except Exception as e:
-                        pdf.set_xy(x_pos, y_pos)
-                        pdf.set_font('Arial', 'I', 8)
-                        pdf.multi_cell(90, 10, f"Chart could not be generated.\n(Error: {str(e)})")
-                        x_pos += 95
-                
-                y_pos += 75 # Move down for next row
-                
-        finally:
-            # Cleanup temp files
-            for f in temp_files:
+            x_pos = 10
+            max_h = 0
+            
+            for fig in row_charts:
                 try:
-                    os.unlink(f)
-                except:
-                    pass
+                    # Convert plotly figure to static image (requires kaleido)
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                        # Use scale=2 for better resolution
+                        fig.write_image(tmp.name, width=500, height=350, scale=2)
+                        temp_files.append(tmp.name)
+                        
+                        # Add to PDF
+                        # Width ~90mm per chart
+                        pdf.image(tmp.name, x=x_pos, y=y_pos, w=90)
+                        x_pos += 95
+                except Exception as e:
+                    pdf.set_xy(x_pos, y_pos)
+                    pdf.set_font('Arial', 'I', 8)
+                    pdf.multi_cell(90, 10, f"Chart could not be generated.\n(Error: {str(e)})")
+                    x_pos += 95
+            
+            y_pos += 75 # Move down for next row
+            
+    finally:
+        # Cleanup temp files
+        for f in temp_files:
+            try:
+                os.unlink(f)
+            except:
+                pass
 
-        return pdf.output(dest='S').encode('latin-1')
-else:
-    # Stub function when PDF libraries are not available
-    def generate_pdf_report(data):
-        """PDF generation not available - install fpdf and kaleido"""
-        return None
+    return pdf.output(dest='S').encode('latin-1')
 
 # ==========================================
 # DASHBOARD RENDERING
@@ -458,7 +426,7 @@ def render_dashboard():
                                 st.download_button(
                                     label=":material/download:",
                                     data=pdf_bytes,
-                                    file_name="PayInsight_Report.pdf",
+                                    file_name="PrimeAnalyst_Report.pdf",
                                     mime="application/pdf",
                                     use_container_width=True,
                                 )
@@ -473,29 +441,23 @@ def render_dashboard():
         
         # ===== ROW 1: KPI CARDS =====
         if data.get("kpis"):
-            num_kpis = len(data["kpis"])
-            cols_per_row = 3
-            for row_start in range(0, num_kpis, cols_per_row):
-                row_kpis = data["kpis"][row_start:row_start + cols_per_row]
-                kpi_cols = st.columns(len(row_kpis))
-                for idx, kpi in enumerate(row_kpis):
-                    with kpi_cols[idx]:
-                        # Derive trend from delta if not explicitly provided
-                        trend_dir = kpi.get("trend", "up" if kpi["delta"].startswith("+") else "down")
-                        trend_class = "positive-trend" if trend_dir == "up" else "negative-trend"
-                        trend_icon = "↑" if trend_dir == "up" else "↓"
+            kpi_cols = st.columns(4)
+            for idx, kpi in enumerate(data["kpis"]):
+                with kpi_cols[idx]:
+                    trend_class = "positive-trend" if kpi["trend"] == "up" else "negative-trend"
+                    trend_icon = "↑" if kpi["trend"] == "up" else "↓"
                     
-                        kpi_html = f"""
-                        <div class="dashboard-card">
-                            <p class="metric-label">{kpi["label"]}</p>
-                            <p class="metric-value">{kpi["value"]}</p>
-                            <span class="metric-delta {trend_class}">
-                                <span class="trend-icon">{trend_icon}</span>
-                                {kpi["delta"]}
-                            </span>
-                        </div>
-                        """
-                        st.markdown(kpi_html, unsafe_allow_html=True)
+                    kpi_html = f"""
+                    <div class="dashboard-card">
+                        <p class="metric-label">{kpi["label"]}</p>
+                        <p class="metric-value">{kpi["value"]}</p>
+                        <span class="metric-delta {trend_class}">
+                            <span class="trend-icon">{trend_icon}</span>
+                            {kpi["delta"]}
+                        </span>
+                    </div>
+                    """
+                    st.markdown(kpi_html, unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
         
         # ===== UNIFIED CHART BOX (Rows 2, 3, 4) =====

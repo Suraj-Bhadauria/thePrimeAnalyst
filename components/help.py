@@ -1,42 +1,17 @@
 # --- START OF FILE src/components/help.py ---
 import streamlit as st
+from components.styles import get_help_css
 
 
 def render_help():
     """Renders the Help page with documentation, FAQs, and support."""
     
+    # Apply help page styles
+    st.markdown(get_help_css(), unsafe_allow_html=True)
+    
     st.title("Help Center")
     st.caption("Find answers and get support")
-    
-    # Search Bar
-    search_query = st.text_input(
-        "Search for help",
-        placeholder="Type your question here...",
-        label_visibility="collapsed"
-    )
-    
-    st.divider()
-    
-    # Quick Links
-    st.subheader("Quick Links")
-    
-    link_col1, link_col2, link_col3, link_col4 = st.columns(4)
-    
-    with link_col1:
-        if st.button("Getting Started", width='stretch'):
-            st.info("Opening Getting Started guide...")
-    
-    with link_col2:
-        if st.button("Documentation", width='stretch'):
-            st.info("Opening documentation...")
-    
-    with link_col3:
-        if st.button("API Reference", width='stretch'):
-            st.info("Opening API reference...")
-    
-    with link_col4:
-        if st.button("Contact Support", width='stretch'):
-            st.info("Opening support form...")
+    st.markdown("<br>", unsafe_allow_html=True)
     
     st.divider()
     
@@ -103,49 +78,27 @@ def render_help():
         2. View current plan and usage
         3. Upgrade, downgrade, or cancel as needed
         
-        For billing questions, contact: billing@payinsight.ai
+        For billing questions, contact: billing@primeanalyst.ai
         """)
     
     st.divider()
     
     # Contact Support
     st.subheader("Contact Support")
+    st.markdown("#### Submit a Ticket")
     
-    contact_col1, contact_col2 = st.columns(2)
+    support_category = st.selectbox(
+        "Category",
+        options=["Technical Issue", "Billing", "Feature Request", "Other"]
+    )
     
-    with contact_col1:
-        st.markdown("#### Submit a Ticket")
-        
-        support_category = st.selectbox(
-            "Category",
-            options=["Technical Issue", "Billing", "Feature Request", "Other"]
-        )
-        
-        support_subject = st.text_input("Subject")
-        support_message = st.text_area("Describe your issue", height=150)
-        
-        if st.button("Submit Ticket", type="primary", width='stretch'):
-            st.success("Support ticket submitted! We'll respond within 24 hours.")
+    support_subject = st.text_input("Subject")
+    support_message = st.text_area("Describe your issue", height=150)
     
-    with contact_col2:
-        st.markdown("#### Other Ways to Reach Us")
-        
-        st.markdown("**Email Support**")
-        st.markdown("support@payinsight.ai")
-        st.markdown("Response time: < 24 hours")
-        
-        st.divider()
-        
-        st.markdown("**Live Chat**")
-        st.markdown("Available Mon-Fri, 9am-5pm EST")
-        st.button("Start Chat", width='stretch')
-        
-        st.divider()
-        
-        st.markdown("**Community Forum**")
-        st.markdown("community.payinsight.ai")
-        st.button("Visit Forum", width='stretch')
+    if st.button("Submit Ticket", type="primary", use_container_width=True):
+        st.success("Support ticket submitted! We'll respond within 24 hours.")
     
+    st.markdown("<br>", unsafe_allow_html=True)
     st.divider()
     
     # System Information
@@ -158,3 +111,5 @@ API Status: Operational
 Database: Connected
 Cache: Enabled
         """)
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)

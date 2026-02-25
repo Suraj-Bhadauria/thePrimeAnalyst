@@ -1,7 +1,7 @@
 # --- START OF FILE src/components/styles.py ---
 
 """
-Custom CSS styles for PayInsight AI
+Custom CSS styles for Prime Analyst
 """
 import streamlit as st
 
@@ -9,33 +9,6 @@ import streamlit as st
 # Main application styles
 MAIN_STYLES = """
 <style>
-    /* ===== REDUCE MAIN CONTAINER PADDING ===== */
-    .stMainBlockContainer,
-    .block-container {
-        padding-top: 2rem !important;
-        padding-bottom: 2rem !important;
-        max-width: 100% !important;
-    }
-    
-    /* ===== FIX MAIN CONTENT ADJUSTMENT ON SIDEBAR COLLAPSE ===== */
-    /* When sidebar is open, main content should have margin */
-    section.main {
-        transition: margin-left 0.3s ease !important;
-    }
-    
-    /* Ensure main content expands when sidebar is collapsed */
-    [data-testid="stSidebar"][aria-expanded="false"] ~ * section.main,
-    body:has([data-testid="stSidebar"][aria-expanded="false"]) section.main {
-        margin-left: 0 !important;
-    }
-    
-    /* Ensure main content has proper width */
-    .main .block-container {
-        max-width: 100% !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
-    }
-    
     /* ===== TIGHTEN HEADER SPACING ===== */
     h1, h2, h3 {
         margin-top: 0.5rem !important;
@@ -118,32 +91,6 @@ MAIN_STYLES = """
 # Additional styles for components
 SIDEBAR_STYLES = """
 <style>
-    /* Fixed sidebar width when open - no resize */
-    [data-testid="stSidebar"][aria-expanded="true"] {
-        min-width: 350px !important;
-        max-width: 350px !important;
-        width: 350px !important;
-    }
-    
-    /* When sidebar is collapsed */
-    [data-testid="stSidebar"][aria-expanded="false"] {
-        min-width: 0px !important;
-        max-width: 0px !important;
-        width: 0px !important;
-    }
-    
-    /* Hide the resize handle/drag bar */
-    [data-testid="stSidebarResizeHandle"] {
-        display: none !important;
-        pointer-events: none !important;
-        width: 0 !important;
-    }
-    
-    /* Main content should transition smoothly */
-    .stMainBlockContainer {
-        transition: margin-left 0.3s ease;
-    }
-    
     .sidebar-metric {
         background: linear-gradient(135deg, #f0f2f6 0%, #764ba2 100%);
         padding: 1rem;
@@ -309,7 +256,7 @@ SIDEBAR_HOVER_STYLES = """
 
 def get_sidebar_styles():
     """
-    Returns earthy professional sidebar CSS targeting PayInsight AI design specs.
+    Returns earthy professional sidebar CSS targeting Prime Analyst design specs.
     
     Theme Colors:
     - Background: #F9F8F6 (Light Beige)
@@ -325,8 +272,6 @@ def get_sidebar_styles():
     
     [data-testid="stSidebar"] {
         background-color: #F9F8F6 !important;
-        width: 280px !important;
-        min-width: 280px !important;
         border-right: 1px solid rgba(0,0,0,0.05);
         padding-top: 1rem !important;
     }
@@ -358,8 +303,10 @@ def get_sidebar_styles():
         box-shadow: none !important;
         background-color: transparent !important;
         color: #4A3B32 !important;
-        align-items: left !important;
         display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        text-align: left !important;
         padding: 0.5rem 0.5rem !important; /* Minimal padding */
         transition: all 0.2s ease !important;
         margin: 0 !important;
@@ -367,6 +314,14 @@ def get_sidebar_styles():
         min-height: 0px !important;
         height: auto !important;
         line-height: 1.2 !important;
+    }
+    
+    /* Ensure button text and icons are left-aligned */
+    [data-testid="stSidebar"] button p,
+    [data-testid="stSidebar"] button span,
+    [data-testid="stSidebar"] button div {
+        text-align: left !important;
+        justify-content: flex-start !important;
     }
 
     /* Hover state for general buttons */
@@ -383,6 +338,21 @@ def get_sidebar_styles():
         outline: none !important;
         color: #F9F8F6 !important;
         background-color: #463830 !important;
+    }
+
+    /* Primary (active) buttons — dark brown background (e.g. active chat) */
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] {
+        background-color: #463830 !important;
+        color: #FFFFFF !important;
+    }
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] p,
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] span,
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] [data-testid="stIconMaterial"] {
+        color: #FFFFFF !important;
+    }
+    [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"]:hover {
+        background-color: #4A3B32 !important;
+        color: #FFFFFF !important;
     }
     
     /* Save and Close buttons in rename mode - add borders */
@@ -407,7 +377,7 @@ def get_sidebar_styles():
         padding: 0px !important;
         transition: background-color 0.1s ease;
         display: flex;
-        align-items: left;
+        align-items: center;
         text-align: left;
     }
     
@@ -428,6 +398,8 @@ def get_sidebar_styles():
         line-height: 1.1 !important;
         min-height: 24px !important;
         height: auto !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
     }
     
     /* Zero out text margins inside activity row buttons */
@@ -455,26 +427,46 @@ def get_sidebar_styles():
     /* 
        CRITICAL: Use !important to override Streamlit's default button styling.
        We apply background to the ROW DIV, and text color to the BUTTON.
+       The row div holds the brown — not the button itself — so it persists
+       through all Streamlit re-renders and pseudo-state changes on the button.
     */
     
-    /* The Active Row Container */
+    /* The Active Row Container — persistent, not tied to any pseudo-class */
     div.activity-row.active {
         background-color: #463830 !important; /* Theme Dark Brown */
         border-radius: 6px !important;
     }
 
-    /* The Text/Button inside active row */
+    /* The Text/Button inside active row — keep button bg transparent so row shows through */
+    div.activity-row.active button,
     div.activity-row.active button p,
-    div.activity-row.active button span,
-    div.activity-row.active button {
+    div.activity-row.active button span {
         color: #FFFFFF !important; /* White Text */
         background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }
     
-    /* Remove hover effect on active button so it stays solid */
-    div.activity-row.active button:hover {
+    /* Lock the brown THROUGH all transient button pseudo-states.
+       Without this, :hover/:focus/:active on the button can momentarily
+       re-apply Streamlit's default button background over the row div's brown. */
+    div.activity-row.active button:hover,
+    div.activity-row.active button:focus,
+    div.activity-row.active button:active,
+    div.activity-row.active button:focus-visible,
+    div.activity-row.active button:focus-within {
         background-color: transparent !important;
         color: #FFFFFF !important;
+        outline: none !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+    
+    /* Also hold the row div brown through those same states in case any
+       Streamlit rule targets the parent element */
+    div.activity-row.active:hover,
+    div.activity-row.active:focus-within {
+        background-color: #463830 !important;
     }
 
     /* =============================================
@@ -588,8 +580,8 @@ def get_sidebar_styles():
         background-color: #463830 !important; /* Dark Brown */
         color: #FFFFFF !important;
         box-shadow: 0 2px 4px rgba(70, 56, 48, 0.2) !important;
-        text-align: center !important;
-        justify-content: center !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
         padding: 0.6rem !important;
         margin-bottom: 1rem !important;
     }
@@ -728,8 +720,6 @@ def get_home_css():
     }
 </style>
 """
-# --- START OF FILE src/components/styles.py ---
-# --- START OF FILE src/components/styles.py ---
 
 def get_dashboard_css():
     """
@@ -857,748 +847,980 @@ def get_dashboard_css():
 </style>
 """
 
-def get_analysis_css():
-    """Returns CSS for the analytics page"""
+def get_analytics_css():
+    """
+    Returns custom CSS for the Analytics Dashboard.
+    """
     return """
-<style>
-    /* Global */
-    .stApp {
-        background: #F2F1EF !important;
-    }
-    
-    /* Filter Bar */
-    .filter-bar {
-        display: flex;
-        align-items: flex-end;
-        gap: 12px;
-        padding: 12px 0;
-        border-bottom: 1px solid #E8E6E1;
-        margin-bottom: 20px;
-    }
-    
-    .filter-label {
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-        color: #6B6560;
-        letter-spacing: 0.5px;
-        margin-bottom: 4px;
-    }
-    
-    /* Platform Buttons */
-    .platform-btn {
-        border: 1px solid #E8E6E1 !important;
-        background: white !important;
-        border-radius: 6px !important;
-        padding: 6px 14px !important;
-        cursor: pointer !important;
-        font-size: 13px !important;
-        color: #6B6560 !important;
-        transition: all 0.2s ease !important;
-    }
-    
-    .platform-active {
-        background: #1A1614 !important;
-        color: white !important;
-        border-color: #1A1614 !important;
-    }
-    
-    /* Dashboard Cards */
-    .dash-card {
-        background: #FFFFFF;
-        border: 1px solid #E8E6E1;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 16px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    }
-    
-    .dash-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-    }
-    
-    .dash-card-title {
-        font-size: 15px;
-        font-weight: 600;
-        color: #1A1614;
-        margin: 0;
-    }
-    
-    .dash-card-subtitle {
-        font-size: 11px;
-        color: #6B6560;
-        margin: 4px 0 0 0;
-    }
-    
-     .chart-type-toggle {
-        display: flex;
-        gap: 8px;
-    }
-    
-    .chart-type-btn {
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        padding: 4px 8px;
-        border-radius: 4px;
-        transition: background 0.2s;
-    }
-    
-    .chart-type-btn:hover {
-        background: #F2F1EF;
-    }
-    
-    .chart-type-btn.active {
-        background: #1A1614;
-    }
-    
-    .chart-type-btn.active svg {
-        stroke: white !important;
-    }
-    
-    .ai-confidence-badge {
-        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-        color: white;
-        font-size: 10px;
-        font-weight: 700;
-        padding: 4px 10px;
-        border-radius: 12px;
-        letter-spacing: 0.5px;
-        display: inline-block;
-        margin-bottom: 12px;
-    }
-    
-    /* AI Panel */
-    .ai-panel {
-        background: #FAFAF9;
-        border-left: 1px solid #E8E6E1;
-        padding: 16px;
-        border-radius: 0 12px 12px 0;
-        height: 100%;
-    }
-    
-    .ai-panel-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 6px;
-    }
-    
-    .ai-panel-title {
-        font-size: 16px;
-        font-weight: 700;
-        color: #1A1614;
-        margin: 0;
-    }
-    
-    .ai-panel-subtitle {
-        font-size: 11px;
-        color: #6B6560;
-        margin: 0 0 20px 0;
-    }
-    
-    /* Metric Tiles */
-    .metric-tile {
-        border: 1px solid #E8E6E1;
-        border-radius: 8px;
-        padding: 12px 14px;
-        text-align: center;
-        background: white;
-        margin-bottom: 12px;
-    }
-    
-    .metric-tile-label {
-        font-size: 9px;
-        font-weight: 700;
-        letter-spacing: 1px;
-        color: #6B6560;
-        text-transform: uppercase;
-        margin-bottom: 6px;
-    }
-    
-    .metric-tile-value {
-        font-size: 22px;
-        font-weight: 700;
-        color: #1A1614;
-        margin: 4px 0;
-    }
-    
-    .delta-up {
-        color: #EF4444;
-        font-size: 11px;
-        font-weight: 600;
-    }
-    
-    .delta-down {
-        color: #10B981;
-        font-size: 11px;
-        font-weight: 600;
-    }
-    
-    /* Insight Cards */
-    .insight-card {
-        border: 1px solid #E8E6E1;
-        border-radius: 10px;
-        padding: 14px;
-        margin-bottom: 12px;
-        background: white;
-        position: relative;
-    }
-    
-    .insight-card.alert {
-        border-left: 3px solid #EF4444;
-    }
-    
-    .insight-card.warning {
-        border-left: 3px solid #F59E0B;
-    }
-    
-    .insight-card.opportunity {
-        border-left: 3px solid #10B981;
-    }
-    
-    .insight-icon-circle {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 10px;
-    }
-    
-    .insight-title {
-        font-size: 13px;
-        font-weight: 600;
-        color: #1A1614;
-        margin: 0 0 6px 0;
-    }
-    
-    .insight-description {
-        font-size: 12px;
-        color: #6B6560;
-        line-height: 1.5;
-        margin: 0 0 12px 0;
-    }
-    
-    .insight-actions {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-    
-    .insight-cta {
-        background: #1A1614;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        padding: 6px 14px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        flex: 1;
-    }
-    
-    .insight-cta:hover {
-        background: #2d241e;
-        transform: translateY(-1px);
-    }
-    
-    .insight-flag {
-        background: transparent;
-        border: 1px solid #E8E6E1;
-        border-radius: 6px;
-        padding: 6px 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    .insight-flag:hover {
-        background: #F2F1EF;
-    }
-    
-    /* Generate Report Button */
-    .generate-report-btn {
-        border: 2px dashed #C8C4BE !important;
-        border-radius: 8px !important;
-        background: transparent !important;
-        width: 100% !important;
-        padding: 12px !important;
-        color: #6B6560 !important;
-        cursor: pointer !important;
-        text-align: center !important;
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        transition: all 0.2s !important;
-    }
-    
-    .generate-report-btn:hover {
-        background: #F2F1EF !important;
-        border-color: #1A1614 !important;
-        color: #1A1614 !important;
-    }
-    
-    /* Cohort Table */
-    .cohort-table {
-        margin-top: 16px;
-    }
-    
-    .cohort-header {
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 1px;
-        color: #6B6560;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-    }
-    
-    /* Hide Streamlit button styling */
-    .dash-card button[kind="primary"],
-    .dash-card button[kind="secondary"],
-    .ai-panel button[kind="primary"],
-    .ai-panel button[kind="secondary"] {
-        background: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        color: inherit !important;
-    }
-    
-    div[data-testid="stHorizontalBlock"] > div:has(> button[kind]) {
-        width: min-content !important;
-    }
-    
-    /* Selectbox styling */
-    div[data-testid="stSelectbox"] > div > div {
-        background: white !important;
-        border: 1px solid #E8E6E1 !important;
-        border-radius: 6px !important;
-    }
-    
-    /* Dynamic heading styles */
-    .chart-main-title {
-        font-size: 15px;
-        font-weight: 650;
-        color: #1A1614;
-        margin-bottom: 2px;
-    }
-    
-    .chart-main-subtitle {
-        font-size: 11px;
-        color: #6B6560;
-        margin-bottom: 12px;
-        letter-spacing: 0.3px;
-    }
-    
-    .page-subtitle-bar {
-        font-size: 12px;
-        color: #6B6560;
-        padding: 6px 0 14px;
-        border-bottom: 1px solid #E8E6E1;
-        margin-bottom: 16px;
-    }
-    
-    .filter-active-summary {
-        display: inline-flex;
-        gap: 6px;
-        flex-wrap: wrap;
-    }
-    
-    .filter-tag {
-        background: #EEF2FF;
-        color: #3730A3;
-        font-size: 10px;
-        font-weight: 600;
-        padding: 3px 8px;
-        border-radius: 10px;
-        letter-spacing: 0.3px;
-    }
-    
-    /* Chart type toggle */
-    .chart-toggle {
-        display: inline-block;
-    }
-    
-    .chart-toggle button {
-        background: transparent !important;
-        border: 1px solid #E8E6E1 !important;
-        color: #6B6560 !important;
-        font-size: 11px !important;
-        padding: 4px 10px !important;
-        border-radius: 5px !important;
-        min-height: 28px !important;
-        height: 28px !important;
-    }
-    
-    .chart-toggle-active button {
-        background: #1A1614 !important;
-        border: 1px solid #1A1614 !important;
-        color: white !important;
-        font-size: 11px !important;
-        padding: 4px 10px !important;
-        border-radius: 5px !important;
-        min-height: 28px !important;
-        height: 28px !important;
-    }
-    
-    /* Detailed metrics section */
-    .section-divider {
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: #6B6560;
-        padding: 24px 0 12px;
-        border-bottom: 1px solid #E8E6E1;
-        margin-bottom: 16px;
-    }
-    
-    /* KPI card styles for metric widgets */
-    .kpi-card {
-        background: #F9F8F6;
-        border: 1px solid #E8E6E1;
-        border-radius: 10px;
-        padding: 16px;
-        text-align: center;
-    }
-    
-    .kpi-label {
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 1px;
-        color: #6B6560;
-        text-transform: uppercase;
-        margin-bottom: 10px;
-    }
-    
-    .kpi-value {
-        font-size: 28px;
-        font-weight: 700;
-        color: #1A1614;
-        margin: 8px 0;
-    }
-    
-    .kpi-delta {
-        font-size: 12px;
-        font-weight: 600;
-    }
-    
-    .kpi-delta.positive {
-        color: #10B981;
-    }
-    
-    .kpi-delta.negative {
-        color: #EF4444;
-    }
-    
-    /* Platform toggle active state */
-    [data-testid="stSidebar"] ~ * .platform-active > button,
-    .platform-active > button {
-        background: #1A1614 !important;
-        color: white !important;
-        border-color: #1A1614 !important;
-    }
-</style>
-"""
-
-def get_report_css():
-    """Complete CSS for the redesigned report page"""
-    
-    COLORS = {
-        "bg_page":        "#F2F1EF",
-        "bg_card":        "#FFFFFF",
-        "bg_panel":       "#FAFAF9",
-        "border":         "#E8E6E1",
-        "border_light":   "#F0EEE9",
-        "text_primary":   "#1A1614",
-        "text_secondary": "#6B6560",
-        "text_muted":     "#9CA3AF",
-        "accent_blue":    "#2563EB",
-        "accent_blue_bg": "#EEF2FF",
-        "accent_blue_text":"#3730A3",
-        "green":          "#10B981",
-        "green_bg":       "#D1FAE5",
-        "orange":         "#F59E0B",
-        "red":            "#EF4444",
-        "red_bg":         "#FEE2E2",
-        "btn_dark":       "#1A1614",
-        "btn_dark_text":  "#FFFFFF",
-    }
-    
-    return f"""
     <style>
-    /* Page background */
-    .stApp, .main .block-container {{
-        background-color: {COLORS["bg_page"]} !important;
-    }}
-    
-    /* Config panel card */
-    .report-config-card {{
-        background: {COLORS["bg_card"]};
-        border: 1px solid {COLORS["border"]};
-        border-radius: 14px;
-        padding: 20px 18px;
-        height: 100%;
-    }}
-    
-    /* Preview panel card */
-    .report-preview-card {{
-        background: {COLORS["bg_card"]};
-        border: 1px solid {COLORS["border"]};
-        border-radius: 14px;
-        padding: 24px 22px;
-        min-height: 600px;
-        /* Dot grid background */
-        background-image: radial-gradient(circle, #D1CDC7 1px, transparent 1px);
-        background-size: 20px 20px;
-        background-color: {COLORS["bg_card"]};
-    }}
-    
-    /* Panel section label (same as analysis filter-label) */
-    .report-section-label {{
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        color: {COLORS["text_secondary"]};
-        margin: 16px 0 8px;
-        display: block;
-    }}
-    
-    /* Segmented control wrapper */
-    .segment-control {{
-        display: flex;
-        gap: 4px;
-        background: {COLORS["bg_page"]};
-        border-radius: 8px;
-        padding: 3px;
-        margin-bottom: 4px;
-    }}
-    
-    /* Metric count badge on expander */
-    .metric-count-badge {{
-        background: {COLORS["accent_blue_bg"]};
-        color: {COLORS["accent_blue_text"]};
-        font-size: 10px;
-        font-weight: 700;
-        padding: 2px 7px;
-        border-radius: 8px;
-        float: right;
-    }}
-    
-    /* Preview header */
-    .preview-report-title {{
-        font-size: 20px;
-        font-weight: 650;
-        color: {COLORS["text_primary"]};
-        margin: 0 0 2px;
-    }}
-    .preview-report-dates {{
-        font-size: 12px;
-        color: {COLORS["text_secondary"]};
-        margin: 0;
-    }}
-    
-    /* Live badge with pulse */
-    .live-badge {{
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        background: {COLORS["green_bg"]};
-        color: #065F46;
-        font-size: 10px;
-        font-weight: 700;
-        padding: 4px 10px;
-        border-radius: 20px;
-        letter-spacing: 0.5px;
-    }}
-    .live-dot {{
-        width: 6px;
-        height: 6px;
-        background: {COLORS["green"]};
-        border-radius: 50%;
-        animation: pulse-dot 2s infinite;
-    }}
-    @keyframes pulse-dot {{
-        0%, 100% {{ opacity: 1; transform: scale(1); }}
-        50% {{ opacity: 0.4; transform: scale(0.7); }}
-    }}
-    
-    /* Section divider in preview */
-    .preview-section-header {{
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: {COLORS["text_secondary"]};
-        padding: 16px 0 8px;
-        border-bottom: 1px solid {COLORS["border"]};
-        margin-bottom: 12px;
-    }}
-    
-    /* Export bar */
-    .export-action-bar {{
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 14px 0 0;
-        border-top: 1px solid {COLORS["border"]};
-        margin-top: 20px;
-    }}
-    .export-bar-info {{
-        font-size: 12px;
-        color: {COLORS["text_secondary"]};
-    }}
-    
-    /* KPI card (same as analysis page) */
-    .kpi-card {{
-        background: {COLORS["bg_card"]};
-        border: 1px solid {COLORS["border"]};
-        border-radius: 10px;
-        padding: 14px 16px;
-        margin-bottom: 10px;
-    }}
-    .kpi-label {{
-        font-size: 11px;
-        color: {COLORS["text_secondary"]};
-        margin-bottom: 4px;
-        font-weight: 500;
-    }}
-    .kpi-value {{
-        font-size: 26px;
-        font-weight: 700;
-        color: {COLORS["text_primary"]};
-        line-height: 1.1;
-    }}
-    .kpi-delta {{
-        display: inline-block;
-        font-size: 11px;
-        padding: 2px 6px;
-        border-radius: 4px;
-        margin-top: 4px;
-    }}
-    .kpi-delta.positive {{ background: {COLORS["green_bg"]}; color: #065F46; }}
-    .kpi-delta.negative {{ background: {COLORS["red_bg"]}; color: #991B1B; }}
-    
-    /* Empty state */
-    .preview-empty-state {{
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 80px 20px;
-        color: {COLORS["text_muted"]};
-        text-align: center;
-    }}
-    .preview-empty-icon {{
-        font-size: 40px;
-        margin-bottom: 12px;
-        opacity: 0.4;
-    }}
-    .preview-empty-text {{
-        font-size: 13px;
-        max-width: 220px;
-        line-height: 1.6;
-    }}
-    
-    /* Clear all button */
-    .report-clear-btn > div > button {{
-        background: transparent !important;
-        border: 1px solid {COLORS["border"]} !important;
-        color: {COLORS["text_secondary"]} !important;
-        border-radius: 8px !important;
-        font-size: 12px !important;
-        width: 100% !important;
-        margin-top: 12px !important;
-    }}
-    .report-clear-btn > div > button:hover {{
-        border-color: {COLORS["red"]} !important;
-        color: {COLORS["red"]} !important;
-    }}
-    
-    /* Dark export button */
-    .export-btn-dark > div > button {{
-        background: {COLORS["btn_dark"]} !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-size: 12px !important;
-        font-weight: 600 !important;
-    }}
-    .export-btn-dark > div > button:hover {{
-        background: #2D2420 !important;
-    }}
-    
-    /* Outlined export button */
-    .export-btn-outline > div > button {{
-        background: transparent !important;
-        color: {COLORS["text_primary"]} !important;
-        border: 1px solid {COLORS["border"]} !important;
-        border-radius: 8px !important;
-        font-size: 12px !important;
-    }}
-    
-    /* Remove default Streamlit metric styling */
-    [data-testid="stMetric"] {{
-        background: {COLORS["bg_card"]};
-        border: 1px solid {COLORS["border"]};
-        border-radius: 10px;
-        padding: 10px 14px;
-        text-align: center;
-    }}
-    [data-testid="stMetricLabel"] {{
-        font-size: 9px !important;
-        letter-spacing: 1.5px !important;
-        text-transform: uppercase !important;
-        color: {COLORS["text_secondary"]} !important;
-        font-weight: 700 !important;
-    }}
-    [data-testid="stMetricValue"] {{
-        font-size: 28px !important;
-        font-weight: 700 !important;
-        color: {COLORS["accent_blue"]} !important;
-    }}
-    
-    /* Segmented radio override */
-    div[data-testid="stRadio"] > div {{
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 4px !important;
-        background: {COLORS["bg_page"]} !important;
-        border-radius: 8px !important;
-        padding: 3px !important;
-    }}
-    div[data-testid="stRadio"] > div > label {{
-        flex: 1 !important;
-        text-align: center !important;
-        padding: 6px 8px !important;
-        border-radius: 6px !important;
-        font-size: 12px !important;
-        cursor: pointer !important;
-        background: transparent !important;
-        color: {COLORS["text_secondary"]} !important;
-        border: none !important;
-        font-weight: 500 !important;
-        transition: all 0.15s !important;
-    }}
-    div[data-testid="stRadio"] > div > label[data-checked="true"],
-    div[data-testid="stRadio"] > div > label:has(input:checked) {{
-        background: {COLORS["btn_dark"]} !important;
-        color: white !important;
-        font-weight: 600 !important;
-    }}
-    div[data-testid="stRadio"] > div > label > div:first-child {{
-        display: none !important;
-    }}
+        /* =============================================
+           1. PAGE BACKGROUND & LAYOUT
+        ============================================= */
+        .stApp {
+            background-color: #F2F1EF;
+        }
+        .main .block-container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            background-color: transparent;
+        }
+
+        /* =============================================
+           2. TYPOGRAPHY
+           Note: stMarkdownContainer p is intentionally
+           NOT scoped globally — it would style all paragraph
+           text app-wide. Filter panel labels are handled
+           via .st-key-analytics_filter_panel in section 5.
+        ============================================= */
+        h1, h2, h3, h4, h5, h6 {
+            color: #111827 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                         Helvetica, Arial, sans-serif !important;
+        }
+        h1 { font-weight: 700; letter-spacing: -0.025em; }
+        h3 { font-weight: 600; letter-spacing: -0.01em; }
+
+        div[data-testid="stMetricValue"] {
+            font-size: 1.6rem !important;
+            color: #111827 !important;
+        }
+        div[data-testid="stMetricLabel"] {
+            color: #6B7280 !important;
+        }
+
+        /* =============================================
+        3. TABS — earthy brown active underline
+        ============================================= */
+        div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+            background-color : transparent !important;
+            border-bottom    : 2px solid #E5E0D8 !important;
+            gap              : 0 !important;
+        }
+        div[data-testid="stTabs"] [data-baseweb="tab"] {
+            height        : 48px;
+            font-weight   : 600;
+            font-size     : 0.95rem;
+            color         : #6B5F52 !important;
+            padding       : 8px 18px !important;
+            border-radius : 6px 6px 0 0 !important;
+            border        : 1px solid transparent !important;
+            border-bottom : none !important;
+            transition    : color 0.15s ease, background-color 0.15s ease;
+        }
+        div[data-testid="stTabs"] [data-baseweb="tab"]:hover {
+            color            : #4A3B32 !important;
+            background-color : rgba(74, 59, 50, 0.05) !important;
+        }
+        div[data-testid="stTabs"] [aria-selected="true"] {
+            color            : #4A3B32 !important;
+            background-color : #F9F8F6 !important;
+            border-color     : #E5E0D8 !important;
+            border-bottom    : 2px solid #F9F8F6 !important;
+        }
+        div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+            background-color : #4A3B32 !important;
+            height           : 2px !important;
+        }
+        div[data-testid="stTabPanel"] {
+            background-color : #F9F8F6 !important;
+            border           : 1px solid #E5E0D8 !important;
+            border-top       : none !important;
+            border-radius    : 0 0 10px 10px !important;
+            padding          : 1rem !important;
+        }
+        /* =============================================
+           4. PLOTLY CHARTS — off-white inner background
+        ============================================= */
+        .js-plotly-plot {
+            border-radius: 8px;
+            background-color: #FAFAF9;
+            margin-bottom: 8px;
+        }
+
+        /* =============================================
+           5. FILTER PANEL
+           Scoped entirely to .st-key-analytics_filter_panel.
+           Cannot reach the sidebar or any other page.
+        ============================================= */
+
+        /* Panel wrapper */
+        .st-key-analytics_filter_panel {
+            background-color: #F9F8F6;
+            border-radius: 12px;
+        }
+
+        /* Form label text — uppercase, earthy */
+        .st-key-analytics_filter_panel div[data-testid="stForm"] p {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6B5F52;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Tighten spacing between form elements */
+        .st-key-analytics_filter_panel div[data-testid="stForm"] .element-container {
+            margin-bottom: 0.75rem;
+        }
+
+        /* Apply button — dark brown, scoped to this panel only */
+        .st-key-analytics_filter_panel button[kind="primaryFormSubmit"],
+        .st-key-analytics_filter_panel button[kind="primary"] {
+            background-color: #4A3B32 !important;
+            border-color: #4A3B32 !important;
+            color: #FFFFFF !important;
+            font-weight: 600;
+        }
+        .st-key-analytics_filter_panel button[kind="primaryFormSubmit"] p,
+        .st-key-analytics_filter_panel button[kind="primaryFormSubmit"] span,
+        .st-key-analytics_filter_panel button[kind="primaryFormSubmit"] svg,
+        .st-key-analytics_filter_panel button[kind="primary"] p,
+        .st-key-analytics_filter_panel button[kind="primary"] span,
+        .st-key-analytics_filter_panel button[kind="primary"] svg {
+            color: #FFFFFF !important;
+            fill: #FFFFFF !important;
+        }
+        .st-key-analytics_filter_panel button[kind="primaryFormSubmit"]:hover,
+        .st-key-analytics_filter_panel button[kind="primary"]:hover {
+            background-color: #2E1F14 !important;
+            border-color: #2E1F14 !important;
+        }
+        /* Reset button — scoped to its own key, subtle link style */
+        .st-key-filter_reset_btn button {
+            background-color: transparent !important;
+            border: none !important;
+            color: #9CA3AF !important;
+        }
+        .st-key-filter_reset_btn button:hover {
+            color: #4A3B32 !important;
+            background: transparent !important;
+            text-decoration: underline;
+        }
+
+        /* =============================================
+           6. EXPORT CSV BUTTON
+           Scoped to its own key only.
+        ============================================= */
+        .st-key-export_csv_btn button {
+            background-color: #FDFBF7 !important;
+            border-color: #D9D0CA !important;
+            color: #4A3B32 !important;
+            font-weight: 500;
+        }
+        .st-key-export_csv_btn button:hover {
+            background-color: #EDE8DF !important;
+            border-color: #4A3B32 !important;
+        }
+
+        /* =============================================
+           7. SECTION CONTAINERS
+           White background for all chart section cards.
+        ============================================= */
+        .st-key-section_txn_overview,
+        .st-key-section_comparison,
+        .st-key-section_temporal,
+        .st-key-section_geo_failure,
+        .st-key-section_stats,
+        .st-key-section_rankings,
+        .st-key-section_bank_matrix,
+        .st-key-section_fraud,
+        .st-key-section_txn_table,
+        .st-key-section_network,
+        .st-key-section_forecast,
+        .st-key-section_correlation {
+            background-color: #FFFFFF;
+        }
+
+        /* Inset stat/metric cards — slightly off-white */
+        .st-key-stats_desc_card,
+        .st-key-network_metrics_card {
+            background-color: #F9F8F6;
+        }
+
+        /* =============================================
+           8. KPI CARDS — all share the kpi_ prefix
+        ============================================= */
+        [class*="st-key-kpi_"] {
+            background-color: #FFFFFF;
+        }
+
+        /* =============================================
+           9. TABLES & DATAFRAMES
+           Scoped to specific section keys only.
+        ============================================= */
+        .st-key-section_txn_table div[data-testid="stTable"] {
+            font-size: 0.9rem;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .st-key-section_txn_table thead tr th {
+            background-color: #F9FAFB !important;
+            color: #4B5563 !important;
+        }
+
+        /* Progress bars — scoped to sections that have them */
+        .st-key-section_txn_table div[data-testid="stDataFrame"] [role="progressbar"] > div,
+        .st-key-section_rankings div[data-testid="stDataFrame"] [role="progressbar"] > div,
+        .st-key-section_fraud div[data-testid="stDataFrame"] [role="progressbar"] > div {
+            background-color: #4A3B32 !important;
+        }
+
+        /* =============================================
+           10. MISC COMPONENTS
+        ============================================= */
+        .streamlit-expanderHeader {
+            background-color: #FDFBF7;
+            border: 1px solid #E5E1DB;
+            border-radius: 8px;
+            color: #4A3B32;
+        }
+        .status-success { color: #4A7C59; font-weight: 600; }
+        .status-failed  { color: #B44C3A; font-weight: 600; }
+        text.nums {
+            font-family: 'Roboto Mono', monospace;
+            font-weight: bold;
+        }
     </style>
     """
 
-# --- START OF FILE src/components/styles.py ---
+def get_report_css() -> str:
+    """
+    Returns the full CSS block for the Reports Generator page.
+    Inject with: st.markdown(get_report_css(), unsafe_allow_html=True)
 
-# ... (Previous standard styles remain) ...
+    Covers:
+      - Page / container chrome
+      - Config card, action bar, preview panel, right-filter panel
+      - Tabs (Summary / Charts / Tables / Full Report)
+      - KPI metric cards
+      - AI Insights panel + depth badge
+      - Named helpers: .report-section-label, .preview-section-header, .rg-generated-badge
+      - Streamlit widget overrides (selectbox, radio, segmented control, toggle,
+        multiselect, text-area, date-input, dataframe, expander, popover, divider)
+      - Download / action buttons
+    """
+    return """
+<style>
+/* ================================================================
+   PRIME ANALYST — REPORTS GENERATOR
+   Palette  (mirrors analytics.py)
+     primary   #4A3B32 | secondary  #6B5F52 | accent    #2563EB
+     success   #4A7C59 | warning    #C17F24 | danger    #B44C3A
+     upi       #C2673A | rupay      #5C7A3E
+     bg        #F2F1EF | card       #FFFFFF  | muted     #6B7280
+   ================================================================ */
+
+
+/* ── 0. EARTHY WIDGET COLOR OVERRIDES ───────────────────────
+   Streamlit sets widget accent colors as inline style attributes
+   via React (e.g. style="background-color: rgb(255,75,75)").
+   We override every component with !important selectors AND
+   [style*="255"] attribute fallbacks to catch inline reds.
+   A JS MutationObserver in reports.py handles React re-renders.
+────────────────────────────────────────────────────────────── */
+
+/* CSS custom property fallback (works when Streamlit reads var()) */
+:root {
+    --primary-color              : #4A3B32;
+    --primary-background-color   : rgba(74, 59, 50, 0.08);
+}
+
+/* ── MULTISELECT TAG PILLS ─────────────────────────────────
+   Streamlit injects: style="background-color: rgb(255,75,75)"
+   on <span data-baseweb="tag">. We override all three colors. */
+[data-baseweb="tag"],
+span[data-baseweb="tag"] {
+    background-color : #EAE5E0 !important;
+    color            : #4A3B32 !important;
+    border-color     : #C9BFB8 !important;
+    border-radius    : 4px !important;
+    font-size        : 11px !important;
+    font-weight      : 600 !important;
+}
+/* Catch any remaining inline red on tag children */
+[data-baseweb="tag"] * { color: #4A3B32 !important; }
+[data-baseweb="tag"] svg,
+[data-baseweb="tag"] [role="presentation"] svg {
+    color: #6B5F52 !important;
+    fill:  #6B5F52 !important;
+}
+
+/* ── RADIO BUTTON ───────────────────────────────────────────
+   Outer ring always earthy brown, inner dot filled when checked.
+   Remove any background highlight on the label row. */
+[data-baseweb="radio"] label {
+    background-color : transparent !important;
+}
+[data-baseweb="radio"] label:hover {
+    background-color : transparent !important;
+}
+/* Outer ring div */
+[data-baseweb="radio"] label > div > div {
+    border-color : #4A3B32 !important;
+}
+/* Inner filled dot */
+[data-baseweb="radio"] label > div > div > div {
+    background-color : #4A3B32 !important;
+}
+/* Catch any div inside radio with inline red bg */
+[data-baseweb="radio"] div[style*="rgb(255"],
+[data-baseweb="radio"] div[style*="255, 75"] {
+    background-color : #4A3B32 !important;
+    border-color     : #4A3B32 !important;
+}
+
+/* ── SEGMENTED CONTROL (Platform / AI Insight Depth) ────────
+   Active button uses outlined style — earthy border + text.
+   Scoped to stMain so it cannot bleed into the sidebar. */
+section[data-testid="stMain"] div[data-testid="stSegmentedControl"] button {
+    border-color     : #D9D0CA !important;
+    color            : #6B5F52 !important;
+    background-color : transparent !important;
+}
+section[data-testid="stMain"] div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+section[data-testid="stMain"] div[data-testid="stSegmentedControl"] button[data-active="true"] {
+    color            : #4A3B32 !important;
+    border-color     : #4A3B32 !important;
+    border-width     : 2px !important;
+    background-color : rgba(74, 59, 50, 0.07) !important;
+    font-weight      : 700 !important;
+}
+/* Inline-style fallback for red text/border */
+section[data-testid="stMain"] div[data-testid="stSegmentedControl"] button[style*="rgb(255"],
+section[data-testid="stMain"] div[data-testid="stSegmentedControl"] button[style*="255, 75"] {
+    color            : #4A3B32 !important;
+    border-color     : #4A3B32 !important;
+    background-color : rgba(74, 59, 50, 0.07) !important;
+}
+
+/* ── TOGGLE LABEL ───────────────────────────────────────────
+   Force transparent bg so primaryColor brown doesn't tint it.
+   Target the stWidgetLabel parent wrapper specifically. */
+section[data-testid="stMain"] div[data-testid="stToggle"],
+section[data-testid="stMain"] div[data-testid="stToggle"] *:not([role="switch"]),
+section[data-testid="stMain"] div[data-testid="stToggle"] div:has(> [data-testid="stWidgetLabel"]) {
+    background-color : transparent !important;
+    background       : transparent !important;
+}
+
+/* ── TAB HIGHLIGHT BAR ──────────────────────────────────────
+   The sliding underline div gets inline background-color red. */
+[data-baseweb="tab-highlight"],
+div[data-baseweb="tab-highlight"] {
+    background-color : #4A3B32 !important;
+    height           : 2px !important;
+}
+[data-baseweb="tab-highlight"][style*="255"],
+[data-baseweb="tab-highlight"][style*="rgb(255"] {
+    background-color : #4A3B32 !important;
+}
+/* ── CHECKBOX ───────────────────────────────────────────────
+   Checked checkbox fill → earthy brown. */
+div[data-testid="stCheckbox"] input:checked + div,
+div[data-testid="stCheckbox"] [data-checked="true"] {
+    background-color : #4A3B32 !important;
+    border-color     : #4A3B32 !important;
+}
+div[data-testid="stCheckbox"] [style*="rgb(255"],
+div[data-testid="stCheckbox"] [style*="255, 75"] {
+    background-color : #4A3B32 !important;
+    border-color     : #4A3B32 !important;
+}
+
+/* ── REMOVE ALL SELECTION HIGHLIGHT BACKGROUNDS ─────────────
+   Streamlit uses primaryColor at ~8% opacity as the hover/focus
+   background on radio rows, toggle rows, and option lists.
+   With red as primary this gives an unwanted brown/red tint. */
+[data-baseweb="radio"] label:hover,
+[data-baseweb="radio"] label:focus-within,
+[data-baseweb="radio"] label[data-checked="true"],
+[data-baseweb="radio"] [data-focused="true"] {
+    background-color : transparent !important;
+    box-shadow       : none !important;
+}
+div[data-testid="stRadio"] > div > div > div {
+    background-color : transparent !important;
+}
+
+/* ── FOCUS RINGS ────────────────────────────────────────────
+   Soft earthy outline, no red. Scoped to stMain only. */
+section[data-testid="stMain"] *:focus-visible {
+    outline-color : rgba(74, 59, 50, 0.5) !important;
+    box-shadow    : 0 0 0 3px rgba(74, 59, 50, 0.15) !important;
+}
+section[data-testid="stMain"] [data-baseweb="select"]:focus-within,
+section[data-testid="stMain"] [data-baseweb="input"]:focus-within {
+    background-color : #FFFFFF !important;
+    border-color : #4A3B32 !important;
+    box-shadow   : 0 0 0 2px rgba(74, 59, 50, 0.15) !important;
+}
+
+
+/* ── 1. PAGE SHELL ──────────────────────────────────────────── */
+
+div[data-testid="stMainBlockContainer"],
+.main .block-container {
+    background-color : #F2F1EF !important;
+    padding-top      : 1.25rem !important;
+    padding-bottom   : 2rem !important;
+    font-family      : 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    color            : #111827;
+}
+
+
+/* ── 2. BORDERED CONTAINERS (cards) ────────────────────────── */
+
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color : #FFFFFF !important;
+    border           : 1px solid #E5E0D8 !important;
+    border-radius    : 10px !important;
+    box-shadow       : 0 1px 4px rgba(74, 59, 50, 0.06) !important;
+}
+
+/* Header bar — clean, no shadow */
+div[data-testid="stVerticalBlock"][data-key="rg_header"]
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color : #FFFFFF !important;
+    border-bottom    : 2px solid #E5E0D8 !important;
+    border-radius    : 0 !important;
+    box-shadow       : none !important;
+}
+
+/* Config card — accent left border */
+div[data-testid="stVerticalBlock"][data-key="rg_config_card"]
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    border-left   : 3px solid #4A3B32 !important;
+    border-radius : 8px !important;
+}
+
+/* Action bar — elevated bottom chrome */
+div[data-testid="stVerticalBlock"][data-key="rg_action_bar"]
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color : #FFFFFF !important;
+    border-top       : 2px solid #E5E0D8 !important;
+    border-radius    : 0 0 10px 10px !important;
+    box-shadow       : 0 -2px 8px rgba(74, 59, 50, 0.04) !important;
+}
+
+/* Preview panel — dashed outline */
+div[data-testid="stVerticalBlock"][data-key="rg_preview_panel"]
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color : #FFFFFF !important;
+    border           : 1.5px dashed #C9BFB8 !important;
+    border-radius    : 10px !important;
+}
+
+/* Right filter panel — sticky */
+div[data-testid="stVerticalBlock"][data-key="rg_right_panel"]
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color : #FAFAF9 !important;
+    border           : 1px solid #E5E0D8 !important;
+    border-radius    : 10px !important;
+    position         : sticky;
+    top              : 1rem;
+}
+
+/* KPI cards — hover lift */
+div[data-testid^="stVerticalBlock"][data-key^="rg_kpi_"]
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color : #FFFFFF !important;
+    border           : 1px solid #E5E0D8 !important;
+    border-radius    : 8px !important;
+    box-shadow       : 0 1px 3px rgba(74, 59, 50, 0.05) !important;
+    transition       : box-shadow 0.2s ease, transform 0.2s ease;
+}
+div[data-testid^="stVerticalBlock"][data-key^="rg_kpi_"]
+div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    box-shadow : 0 4px 12px rgba(74, 59, 50, 0.10) !important;
+    transform  : translateY(-1px);
+}
+
+/* AI insights panel — secondary left stripe */
+div[data-testid="stVerticalBlock"][data-key="rg_ai_panel"]
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color : #FFFFFF !important;
+    border-left      : 3px solid #6B5F52 !important;
+    border-radius    : 8px !important;
+}
+
+/* Revenue trends section */
+div[data-testid="stVerticalBlock"][data-key="rg_trends_section"]
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color : #FFFFFF !important;
+    border-radius    : 10px !important;
+}
+
+
+/* ── 2b. TYPOGRAPHY (mirrors analytics.py) ──────────────────── */
+
+h1, h2, h3, h4, h5, h6 {
+    color       : #111827 !important;
+    font-family : -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                  Helvetica, Arial, sans-serif !important;
+}
+h1 { font-weight: 700; letter-spacing: -0.025em; }
+h3 { font-weight: 600; letter-spacing: -0.01em; }
+
+
+/* ── 3. TABS ────────────────────────────────────────────────── */
+
+section[data-testid="stMain"] .stTabs [data-baseweb="tab-list"] {
+    gap           : 0;
+    border-bottom : 2px solid #E5E0D8;
+    padding-bottom: 0;
+}
+section[data-testid="stMain"] .stTabs [data-baseweb="tab"] {
+    height           : 48px;
+    background-color : transparent;
+    border-radius    : 6px 6px 0 0;
+    border           : 1px solid transparent;
+    border-bottom    : none;
+    color            : #6B5F52;
+    font-weight      : 600;
+    font-size        : 0.95rem;
+    padding          : 0 18px;
+    transition       : color 0.15s ease, background-color 0.15s ease;
+}
+section[data-testid="stMain"] .stTabs [data-baseweb="tab"]:hover {
+    color            : #4A3B32;
+    background-color : rgba(74, 59, 50, 0.05);
+}
+section[data-testid="stMain"] .stTabs [data-baseweb="tab-highlight"] {
+    background-color : #4A3B32 !important;
+    height           : 2px;
+}
+section[data-testid="stMain"] div[data-testid="stTabPanel"] {
+    background-color : #FFFFFF;
+    border           : 1px solid #E5E0D8;
+    border-top       : none;
+    border-radius    : 0 0 10px 10px;
+    padding          : 1rem;
+}
+
+/* ── 4. NAMED HELPER CLASSES ────────────────────────────────── */
+
+/* Sub-label above right-panel controls */
+p.report-section-label,
+.report-section-label {
+    font-size      : 10px !important;
+    font-weight    : 700 !important;
+    letter-spacing : 0.07em !important;
+    text-transform : uppercase !important;
+    color          : #8C7B6E !important;
+    margin         : 10px 0 4px !important;
+}
+
+/* Section headings inside Charts / Tables tabs */
+p.preview-section-header,
+.preview-section-header {
+    font-size      : 12px !important;
+    font-weight    : 700 !important;
+    color          : #6B5F52 !important;
+    text-transform : uppercase !important;
+    letter-spacing : 0.05em !important;
+    margin         : 12px 0 6px !important;
+    padding-bottom : 4px !important;
+    border-bottom  : 1px solid #E5E0D8 !important;
+}
+
+/* AI depth badge  (SUMMARY / DETAILED / EXECUTIVE) */
+span.rg-generated-badge,
+.rg-generated-badge {
+    display          : inline-block;
+    font-size        : 9px !important;
+    font-weight      : 700 !important;
+    letter-spacing   : 0.08em !important;
+    text-transform   : uppercase !important;
+    color            : #4A3B32 !important;
+    background-color : #EAE5E0 !important;
+    border           : 1px solid #C9BFB8 !important;
+    border-radius    : 20px !important;
+    padding          : 2px 9px !important;
+    line-height      : 1.6 !important;
+    white-space      : nowrap;
+}
+
+
+/* ── 5. METRIC  (st.metric) ─────────────────────────────────── */
+
+div[data-testid="stMetric"] label {
+    font-size      : 10px !important;
+    font-weight    : 700 !important;
+    letter-spacing : 0.06em !important;
+    text-transform : uppercase !important;
+    color          : #6B7280 !important;
+}
+
+div[data-testid="stMetricValue"] {
+    font-size   : 1.6rem !important;
+    font-weight : 700 !important;
+    color       : #111827 !important;
+}
+
+div[data-testid="stMetricDelta"] svg { display: none !important; }
+
+div[data-testid="stMetricDelta"] {
+    font-size   : 12px !important;
+    font-weight : 600 !important;
+}
+
+
+/* ── 6. BUTTONS ─────────────────────────────────────────────── */
+
+/* Action bar — primary solid buttons */
+div[data-key="rg_action_bar"] button {
+    background-color : #4A3B32 !important;
+    color            : #F9F8F6 !important;
+    border           : 1px solid #4A3B32 !important;
+    border-radius    : 7px !important;
+    font-weight      : 600 !important;
+    font-size        : 13px !important;
+    transition       : background-color 0.15s ease, transform 0.15s ease;
+}
+div[data-key="rg_action_bar"] button:hover {
+    background-color : #6B5F52 !important;
+    transform        : translateY(-1px) !important;
+}
+
+/* Preview toggle — ghost */
+section[data-testid="stMain"] button[data-testid*="rg_preview_btn"] {
+    background-color : transparent !important;
+    color            : #4A3B32 !important;
+    border           : 1.5px solid #C9BFB8 !important;
+    border-radius    : 7px !important;
+    font-weight      : 600 !important;
+    font-size        : 13px !important;
+}
+section[data-testid="stMain"] button[data-testid*="rg_preview_btn"]:hover {
+    background-color : #F2F1EF !important;
+    border-color     : #4A3B32 !important;
+}
+
+/* Download / Generate — success green */
+div[data-key="rg_action_bar"][data-testid="stDownloadButton"] button {
+    background-color : #4A7C59 !important;
+    border-color     : #4A7C59 !important;
+    color            : #FFFFFF !important;
+}
+div[data-key="rg_action_bar"] [data-testid="stDownloadButton"] button:hover {
+    background-color : #4A7C59 !important;
+    filter           : brightness(0.88);
+}
+
+/* Reset Filters — danger ghost */
+section[data-testid="stMain"] button[data-testid*="rg_reset"] {
+    background-color : transparent !important;
+    color            : #B44C3A !important;
+    border           : 1px solid #B44C3A !important;
+    border-radius    : 6px !important;
+    font-size        : 12px !important;
+    font-weight      : 600 !important;
+}
+section[data-testid="stMain"] section[data-testid="stMain"] button[data-testid*="rg_reset"]:hover {
+    background-color : rgba(180, 76, 58, 0.08) !important;
+}
+
+/* Email Send button */
+section[data-testid="stMain"] button[data-testid*="rg_email_send"] {
+    background-color : #4A3B32 !important;
+    color            : #F9F8F6 !important;
+    border           : none !important;
+    border-radius    : 7px !important;
+    font-weight      : 600 !important;
+    font-size        : 13px !important;
+}
+section[data-testid="stMain"] button[data-testid*="rg_email_send"]:hover {
+    background-color : #6B5F52 !important;
+}
+
+
+/* ── 7. FORM CONTROLS ───────────────────────────────────────── */
+
+/* Selectbox & multiselect */
+section[data-testid="stMain"] div[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+section[data-testid="stMain"] div[data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+    background-color : #FFFFFF !important;
+    border           : 1px solid #D9D0CA !important;
+    border-radius    : 7px !important;
+    font-size        : 13px !important;
+    color            : #4A3B32 !important;
+}
+section[data-testid="stMain"] div[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within,
+section[data-testid="stMain"] div[data-testid="stMultiSelect"] [data-baseweb="select"] > div:focus-within {
+    background-color : #FFFFFF !important;
+    border-color : #4A3B32 !important;
+    box-shadow   : 0 0 0 2px rgba(74, 59, 50, 0.12) !important;
+}
+
+/* Multiselect tags — high-specificity layer on top of section 0 */
+section[data-testid="stMain"] div[data-testid="stMultiSelect"] [data-baseweb="tag"],
+section[data-testid="stMain"] div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {
+    background-color : #EAE5E0 !important;
+    color            : #4A3B32 !important;
+    border-color     : #C9BFB8 !important;
+}
+
+/* Radio */
+section[data-testid="stMain"] div[data-testid="stRadio"] label {
+    font-size   : 13px !important;
+    color       : #4A3B32 !important;
+    font-weight : 500 !important;
+}
+/* Inner dot and outer ring — add specificity on top of section 0 */
+section[data-testid="stMain"] div[data-testid="stRadio"] [data-baseweb="radio"] label > div > div > div {
+    background-color : #4A3B32 !important;
+}
+section[data-testid="stMain"] div[data-testid="stRadio"] [data-baseweb="radio"] label > div > div {
+    border-color : #4A3B32 !important;
+}
+section[data-testid="stMain"] div[data-testid="stRadio"] [data-baseweb="radio"] div[style*="255"],
+section[data-testid="stMain"] div[data-testid="stRadio"] [data-baseweb="radio"] div[style*="rgb(255"] {
+    background-color : #4A3B32 !important;
+    border-color     : #4A3B32 !important;
+}
+
+/* Segmented control — add specificity layer, scoped to main content */
+section[data-testid="stMain"] div[data-testid="stSegmentedControl"] button {
+    font-size   : 12px !important;
+    font-weight : 600 !important;
+    color       : #6B5F52 !important;
+    border      : 1px solid #D9D0CA !important;
+}
+section[data-testid="stMain"] div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+section[data-testid="stMain"] div[data-testid="stSegmentedControl"] button[data-active="true"] {
+    color            : #4A3B32 !important;
+    border-color     : #4A3B32 !important;
+    border-width     : 2px !important;
+    background-color : rgba(74, 59, 50, 0.08) !important;
+    font-weight      : 700 !important;
+}
+
+/* Toggle label — transparent bg */
+section[data-testid="stMain"] div[data-testid="stToggle"],
+section[data-testid="stMain"] div[data-testid="stToggle"] *:not([role="switch"]),
+section[data-testid="stMain"] div[data-testid="stToggle"] div:has(> [data-testid="stWidgetLabel"]) {
+    background-color : transparent !important;
+    background       : transparent !important;
+}
+
+/* Date input */
+section[data-testid="stMain"] div[data-testid="stDateInput"] input {
+    background-color : #FFFFFF !important;
+    border           : 1px solid #D9D0CA !important;
+    border-radius    : 7px !important;
+    color            : #4A3B32 !important;
+    font-size        : 13px !important;
+}
+section[data-testid="stMain"] div[data-testid="stDateInput"] input:focus {
+    background-color : #FFFFFF !important;
+    border-color : #4A3B32 !important;
+    box-shadow   : 0 0 0 2px rgba(74, 59, 50, 0.12) !important;
+}
+
+/* Text area (AI custom query) */
+section[data-testid="stMain"] div[data-testid="stTextArea"] textarea {
+    background-color : #FFFFFF !important;
+    border           : 1px solid #D9D0CA !important;
+    border-radius    : 7px !important;
+    color            : #4A3B32 !important;
+    font-size        : 12px !important;
+    line-height      : 1.5 !important;
+    resize           : vertical;
+}
+section[data-testid="stMain"] div[data-testid="stTextArea"] textarea:focus {
+    background-color : #FFFFFF !important;
+    border-color : #4A3B32 !important;
+    box-shadow   : 0 0 0 2px rgba(74, 59, 50, 0.12) !important;
+}
+section[data-testid="stMain"] div[data-testid="stTextArea"] textarea::placeholder {
+    color      : #A89890 !important;
+    font-style : italic;
+}
+
+/* Text input (email field) */
+section[data-testid="stMain"] div[data-testid="stTextInput"] input {
+    background-color : #FFFFFF !important;
+    border           : 1px solid #D9D0CA !important;
+    border-radius    : 7px !important;
+    color            : #4A3B32 !important;
+    font-size        : 13px !important;
+}
+section[data-testid="stMain"] div[data-testid="stTextInput"] input:focus {
+    background-color : #FFFFFF !important;
+    border-color : #4A3B32 !important;
+    box-shadow   : 0 0 0 2px rgba(74, 59, 50, 0.12) !important;
+}
+
+
+/* ── 8. CHECKBOX (category selector) ────────────────────────── */
+
+section[data-testid="stMain"] div[data-testid="stCheckbox"] label {
+    font-size : 12px !important;
+    color     : #4A3B32 !important;
+}
+section[data-testid="stMain"] div[data-testid="stCheckbox"] input:checked + div {
+    background-color : #4A3B32 !important;
+    border-color     : #4A3B32 !important;
+}
+
+
+/* ── 9. EXPANDER ────────────────────────────────────────────── */
+
+section[data-testid="stMain"] div[data-testid="stExpander"] summary {
+    background-color : #F9FAFB !important;
+    border           : 1px solid #E5E0D8 !important;
+    border-radius    : 6px !important;
+    padding          : 8px 12px !important;
+    font-size        : 12px !important;
+    font-weight      : 600 !important;
+    color            : #111827 !important;
+    transition       : background-color 0.15s ease;
+}
+section[data-testid="stMain"] div[data-testid="stExpander"] summary:hover {
+    background-color : #E8E4DF !important;
+}
+section[data-testid="stMain"] div[data-testid="stExpander"][open] summary {
+    border-bottom-left-radius  : 0 !important;
+    border-bottom-right-radius : 0 !important;
+    border-bottom              : none !important;
+}
+section[data-testid="stMain"] div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+    background-color : #FFFFFF !important;
+    border           : 1px solid #E5E0D8 !important;
+    border-top       : none !important;
+    border-radius    : 0 0 6px 6px !important;
+    padding          : 10px 12px !important;
+}
+
+
+/* ── 10. DATAFRAME / TABLE ──────────────────────────────────── */
+
+section[data-testid="stMain"] div[data-testid="stDataFrame"] > div {
+    border        : 1px solid #E5E0D8 !important;
+    border-radius : 8px !important;
+    overflow      : hidden;
+}
+section[data-testid="stMain"] div[data-testid="stDataFrame"] th {
+    background-color : #F9FAFB !important;
+    color            : #4B5563 !important;
+    font-size        : 11px !important;
+    font-weight      : 700 !important;
+    text-transform   : uppercase !important;
+    letter-spacing   : 0.05em !important;
+    border-bottom    : 1px solid #D9D0CA !important;
+}
+section[data-testid="stMain"] div[data-testid="stDataFrame"] td {
+    font-size : 12px !important;
+    color     : #111827 !important;
+}
+section[data-testid="stMain"] div[data-testid="stDataFrame"] tr:nth-child(even) td {
+    background-color : #F9F8F6 !important;
+}
+section[data-testid="stMain"] div[data-testid="stDataFrame"] tr:hover td {
+    background-color : rgba(74, 59, 50, 0.04) !important;
+}
+
+
+/* ── 11. ALERTS / CALLOUTS ──────────────────────────────────── */
+
+/* Info */
+section[data-testid="stMain"] div[data-testid="stAlert"][kind="info"],
+section[data-testid="stMain"] div[data-baseweb="notification"][kind="info"] {
+    background-color : #F9F8F6 !important;
+    border-left      : 3px solid #6B5F52 !important;
+    border-radius    : 7px !important;
+    color            : #4A3B32 !important;
+    font-size        : 12px !important;
+}
+
+/* Warning */
+section[data-testid="stMain"] div[data-testid="stAlert"][kind="warning"],
+section[data-testid="stMain"] div[data-baseweb="notification"][kind="warning"] {
+    background-color : #F9F8F6 !important;
+    border-left      : 3px solid #C17F24 !important;
+    border-radius    : 7px !important;
+    color            : #4A3B32 !important;
+    font-size        : 12px !important;
+}
+
+/* Error */
+section[data-testid="stMain"] div[data-testid="stAlert"][kind="error"],
+section[data-testid="stMain"] div[data-baseweb="notification"][kind="error"] {
+    background-color : #F2F1EF !important;
+    border-left      : 3px solid #B44C3A !important;
+    border-radius    : 7px !important;
+    font-size        : 12px !important;
+}
+
+
+/* ── 12. POPOVER (email share) ──────────────────────────────── */
+
+section[data-testid="stMain"] div[data-testid="stPopover"] > div {
+    background-color : #FFFFFF !important;
+    border           : 1px solid #E5E0D8 !important;
+    border-radius    : 10px !important;
+    box-shadow       : 0 8px 24px rgba(74, 59, 50, 0.12) !important;
+    padding          : 12px !important;
+}
+
+
+/* ── 13. DIVIDERS ───────────────────────────────────────────── */
+
+section[data-testid="stMain"] hr[data-testid="stDivider"],
+section[data-testid="stMain"] hr {
+    border-color : #E5E0D8 !important;
+    margin       : 0.75rem 0 !important;
+}
+
+
+/* ── 14. CAPTION / SMALL TEXT ───────────────────────────────── */
+
+section[data-testid="stMain"] div[data-testid="stCaptionContainer"] p,
+section[data-testid="stMain"] .stCaption {
+    color     : #8C7B6E !important;
+    font-size : 11px !important;
+}
+
+
+/* ── 15. PLOTLY CHART WRAPPER ───────────────────────────────── */
+
+section[data-testid="stMain"] div[data-testid="stPlotlyChart"] {
+    border-radius : 8px !important;
+    overflow      : hidden;
+    background    : transparent !important;
+}
+
+
+/* ── 16. SPINNER ────────────────────────────────────────────── */
+
+section[data-testid="stMain"] div[data-testid="stSpinner"] > div {
+    border-top-color : #4A3B32 !important;
+}
+
+
+/* ── 17. TOAST ──────────────────────────────────────────────── */
+
+section[data-testid="stMain"] div[data-testid="stToast"] {
+    background-color : #4A3B32 !important;
+    color            : #F9F8F6 !important;
+    border-radius    : 8px !important;
+    font-size        : 13px !important;
+    box-shadow       : 0 4px 16px rgba(74, 59, 50, 0.20) !important;
+}
+
+
+/* ── 18. SCROLLBAR ──────────────────────────────────────────── */
+
+section[data-testid="stMain"] ::-webkit-scrollbar               { width: 5px; height: 5px; }
+section[data-testid="stMain"] ::-webkit-scrollbar-track         { background: #F2F1EF; }
+section[data-testid="stMain"] ::-webkit-scrollbar-thumb         { background: #C9BFB8; border-radius: 10px; }
+section[data-testid="stMain"] ::-webkit-scrollbar-thumb:hover   { background: #6B5F52; }
+
+
+</style>
+"""
 
 def get_chat_css():
     """Chat page styles with compact hero and custom SVG inputs"""
@@ -1615,8 +1837,10 @@ def get_chat_css():
     /* ===== PAGE LAYOUT RESET ===== */
     .stMainBlockContainer, .block-container {
         padding-top: 1rem !important;
-        padding-bottom: 0rem !important;
-        max-width: 900px !important;
+        padding-bottom: 2rem !important;
+        max-width: 1200px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
     
     /* ===== CHAT MESSAGES STYLING ===== */
@@ -1660,39 +1884,41 @@ def get_chat_css():
         display: none !important; /* Hide default SVG if any */
     }
     
-    /* ===== CHAT INPUT FIELD ===== */
+    /* ===== CHAT INPUT STYLING ===== */
     
-    /* The main container at the bottom */
+    /* Bottom container - let Streamlit handle positioning */
+    div[data-testid="stBottom"] {
+        background: linear-gradient(to top, #FDFCFB 85%, transparent) !important;
+        padding-bottom: 1rem !important;
+    }
+    
+    /* The chat input wrapper */
     div[data-testid="stChatInput"] {
-        background-color: transparent !important;
-        padding-bottom: 2rem !important;
+        background: #FFFFFF !important;
+        border: 1px solid #D9D0CA !important;
+        border-radius: 24px !important;
+        box-shadow: 0 2px 12px rgba(74, 59, 50, 0.1) !important;
     }
     
-    /* The Input Box itself */
-    div[data-testid="stChatInput"] textarea,
-    div[data-testid="stChatInput"] input {
-        background-color: #FDFBF7 !important; /* Cream Input */
-        color: #4A3B32 !important; /* Brown Text */
-        border: 2px solid rgba(74, 59, 50, 0.2) !important; /* Subtle Brown Border */
-        border-radius: 16px !important;
-        padding: 12px 16px !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
+    /* The textarea */
+    div[data-testid="stChatInput"] textarea {
+        background: transparent !important;
+        border: none !important;
+        color: #4A3B32 !important;
     }
     
-    /* Focus State */
-    div[data-testid="stChatInput"] textarea:focus,
-    div[data-testid="stChatInput"] input:focus {
-        border-color: #4A3B32 !important;
-        box-shadow: 0 4px 16px rgba(74, 59, 50, 0.1) !important;
+    div[data-testid="stChatInput"] textarea::placeholder {
+        color: #8C7B6E !important;
     }
     
-    /* The Send Button inside input */
+    /* All buttons inside chat input */
     div[data-testid="stChatInput"] button {
-        color: #4A3B32 !important;
+        color: #6B5F52 !important;
     }
+    
     div[data-testid="stChatInput"] button:hover {
-        background-color: rgba(74, 59, 50, 0.1) !important;
         color: #4A3B32 !important;
+        background: rgba(74, 59, 50, 0.08) !important;
     }
 
     /* ===== HERO CONTAINER ===== */
@@ -1702,8 +1928,8 @@ def get_chat_css():
         align-items: center;
         justify-content: center;
         padding: 0 1rem;
-        margin-top: 1vh;
-        margin-bottom: 1.5rem;
+        padding-top: 10vh;
+        margin-bottom: 2rem;
     }
     
     .hero-greeting {
@@ -1831,144 +2057,327 @@ def get_chat_css():
         line-height: 1.2;
     }
     
-    /* Thought Process Styles */
+    /* Reason Expander */
     div[data-testid="stExpander"] .reasoning-content {
-        background: #FDFBF7;
-        border-left: 3px solid #4A3B32;
+        background: #FDFBF7; /* Cream */
+        border-left: 3px solid #4A3B32; /* Brown */
         padding: 1rem;
         border-radius: 4px;
         font-family: monospace;
         font-size: 0.85rem;
         color: #6B5F52;
     }
-
-    /* ===== THOUGHT PROCESS COMPONENT ===== */
-    .thought-process {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 0.85rem;
-        color: #4A3B32;
-    }
-
-    .tp-step {
-        position: relative;
-        padding: 0.6rem 0 0.6rem 1.5rem;
-        border-left: 2px solid #E8E0D8;
-        margin-left: 0.5rem;
-    }
-
-    .tp-step:last-child {
-        border-left: 2px solid transparent;
-    }
-
-    .tp-step::before {
-        content: '';
-        position: absolute;
-        left: -5px;
-        top: 0.85rem;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #D4C5B5;
-        border: 2px solid #FDFBF7;
-    }
-
-    .tp-step-active::before {
-        background: #D4A03C;
-        box-shadow: 0 0 0 3px rgba(212, 160, 60, 0.2);
-        animation: tp-pulse 1.5s ease-in-out infinite;
-    }
-
-    .tp-step-done::before {
-        background: #5A9E6F;
-    }
-
-    .tp-step-error::before {
-        background: #C0504D;
-    }
-
-    @keyframes tp-pulse {
-        0%, 100% { box-shadow: 0 0 0 2px rgba(212, 160, 60, 0.15); }
-        50% { box-shadow: 0 0 0 6px rgba(212, 160, 60, 0.08); }
-    }
-
-    .tp-step-header {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-weight: 600;
-        margin-bottom: 0.25rem;
-    }
-
-    .tp-icon {
-        font-size: 0.95rem;
-    }
-
-    .tp-title {
-        color: #4A3B32;
-    }
-
-    .tp-status {
-        font-size: 0.7rem;
-        font-weight: 600;
-        padding: 0.1rem 0.45rem;
-        border-radius: 9999px;
-        margin-left: auto;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-    }
-
-    .tp-running {
-        background: #FEF3C7;
-        color: #92400E;
-    }
-
-    .tp-done {
-        background: #D1FAE5;
-        color: #065F46;
-    }
-
-    .tp-error {
-        background: #FEE2E2;
-        color: #991B1B;
-    }
-
-    .tp-details {
-        padding-left: 1.35rem;
-    }
-
-    .tp-detail-line {
-        color: #6B5F52;
-        font-size: 0.8rem;
-        line-height: 1.5;
-        padding: 0.1rem 0;
-    }
-
-    .tp-detail-line strong {
-        color: #4A3B32;
-    }
-
-    .tp-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.3rem 0.75rem;
-        margin-top: 0.3rem;
-        padding: 0.4rem 0.6rem;
-        background: rgba(74, 59, 50, 0.04);
-        border-radius: 6px;
-        font-size: 0.75rem;
-    }
-
-    .tp-meta-item {
-        color: #6B5F52;
-    }
-
-    .tp-meta-key {
-        font-weight: 600;
-        color: #4A3B32;
-    }
     
     .suggestion-grid-container [data-testid="stVerticalBlock"] > div {
         align-items: stretch !important;
+    }
+    
+    /* Chat charts styling */
+    .chat-chart-container {
+        background: #FDFBF7;
+        border-radius: 8px;
+        padding: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    /* ===== NEWS PANEL (rendered via components.html iframe) ===== */
+</style>
+"""
+
+def get_help_css():
+    """Returns CSS styling for the Help page"""
+    return """
+    <style>
+        /* Help Page Styles */
+        section[data-testid="stMain"] h1 {
+            color: #4A3B32 !important;
+            font-weight: 700 !important;
+        }
+        
+        section[data-testid="stMain"] .stCaptionContainer {
+            color: #8C7B6E !important;
+        }
+        
+        section[data-testid="stMain"] h2,
+        section[data-testid="stMain"] h3 {
+            color: #4A3B32 !important;
+            font-weight: 600 !important;
+        }
+        
+        section[data-testid="stMain"] h4 {
+            color: #6B5F52 !important;
+            font-weight: 600 !important;
+        }
+        
+        /* FAQ Expanders */
+        section[data-testid="stMain"] .streamlit-expanderHeader {
+            background-color: #F9F8F6 !important;
+            color: #4A3B32 !important;
+            font-weight: 500 !important;
+            border-radius: 8px !important;
+            padding: 0.75rem 1rem !important;
+        }
+        
+        section[data-testid="stMain"] .streamlit-expanderHeader:hover {
+            background-color: #F0EDE8 !important;
+        }
+        
+        section[data-testid="stMain"] .streamlit-expanderContent {
+            background-color: #FDFBF7 !important;
+            border-left: 3px solid #4A3B32 !important;
+            padding: 1rem !important;
+            color: #6B5F52 !important;
+        }
+        
+        /* Contact Form Inputs */
+        section[data-testid="stMain"] .stSelectbox > label,
+        section[data-testid="stMain"] .stTextInput > label,
+        section[data-testid="stMain"] .stTextArea > label {
+            color: #4A3B32 !important;
+            font-weight: 500 !important;
+        }
+        
+        section[data-testid="stMain"] .stSelectbox input,
+        section[data-testid="stMain"] .stSelectbox > div > div,
+        section[data-testid="stMain"] .stTextInput input,
+        section[data-testid="stMain"] .stTextArea textarea {
+            background-color: white !important;
+            border-color: #E8E5E0 !important;
+        }
+        
+        section[data-testid="stMain"] .stSelectbox input:focus,
+        section[data-testid="stMain"] .stSelectbox > div > div:focus,
+        section[data-testid="stMain"] .stTextInput input:focus,
+        section[data-testid="stMain"] .stTextArea textarea:focus {
+            background-color: white !important;
+            border-color: #4A3B32 !important;
+        }
+        
+        /* Ensure all input elements stay white on focus */
+        section[data-testid="stMain"] [data-baseweb="input"]:focus-within,
+        section[data-testid="stMain"] [data-baseweb="select"]:focus-within,
+        section[data-testid="stMain"] input:focus,
+        section[data-testid="stMain"] textarea:focus {
+            background-color: white !important;
+        }
+        
+        /* Submit Button */
+        section[data-testid="stMain"] button[kind="primary"] {
+            background-color: #4A3B32 !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 0.5rem 1rem !important;
+            font-weight: 600 !important;
+        }
+        
+        section[data-testid="stMain"] button[kind="primary"]:hover {
+            background-color: #3A2D24 !important;
+        }
+        
+        /* Dividers */
+        section[data-testid="stMain"] hr {
+            border-color: #F0EDE8 !important;
+            margin: 1.5rem 0 !important;
+        }
+        
+        /* Code blocks */
+        section[data-testid="stMain"] .stCodeBlock,
+        section[data-testid="stMain"] code {
+            background-color: #F9F8F6 !important;
+            color: #4A3B32 !important;
+            border: 1px solid #E8E5E0 !important;
+        }
+    </style>
+    """
+
+def get_profile_css():
+    """Returns CSS styling for the Profile page"""
+    return """
+    <style>
+        /* Profile Page Styles */
+        section[data-testid="stMain"] h1 {
+            color: #4A3B32 !important;
+            font-weight: 700 !important;
+        }
+        
+        section[data-testid="stMain"] .stCaptionContainer {
+            color: #8C7B6E !important;
+        }
+        
+        section[data-testid="stMain"] h2,
+        section[data-testid="stMain"] h3 {
+            color: #4A3B32 !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Profile Card */
+        section[data-testid="stMain"] [data-testid="stVerticalBlock"] {
+            background-color: #FDFBF7 !important;
+            border-radius: 12px !important;
+        }
+        
+        /* Input Fields */
+        section[data-testid="stMain"] .stTextInput > label,
+        section[data-testid="stMain"] .stSelectbox > label {
+            color: #4A3B32 !important;
+            font-weight: 500 !important;
+        }
+        
+        section[data-testid="stMain"] .stTextInput input,
+        section[data-testid="stMain"] .stSelectbox > div > div {
+            border-color: #E8E5E0 !important;
+            background-color: white !important;
+        }
+        
+        section[data-testid="stMain"] .stTextInput input:focus,
+        section[data-testid="stMain"] .stSelectbox > div > div:focus {
+            border-color: #4A3B32 !important;
+            box-shadow: 0 0 0 1px #4A3B32 !important;
+            background-color: white !important;
+        }
+        
+        /* Ensure all input elements stay white on focus */
+        section[data-testid="stMain"] [data-baseweb="input"]:focus-within,
+        section[data-testid="stMain"] [data-baseweb="select"]:focus-within,
+        section[data-testid="stMain"] input:focus,
+        section[data-testid="stMain"] textarea:focus {
+            background-color: white !important;
+        }
+        
+        /* Buttons */
+        section[data-testid="stMain"] button[kind="primary"] {
+            background-color: #4A3B32 !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 0.5rem 1rem !important;
+            font-weight: 600 !important;
+        }
+        
+        section[data-testid="stMain"] button[kind="primary"]:hover {
+            background-color: #3A2D24 !important;
+        }
+        
+        section[data-testid="stMain"] button[kind="secondary"] {
+            background-color: #F9F8F6 !important;
+            color: #4A3B32 !important;
+            border: 1px solid #E8E5E0 !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+        }
+        
+        section[data-testid="stMain"] button[kind="secondary"]:hover {
+            background-color: #F0EDE8 !important;
+            border-color: #4A3B32 !important;
+        }
+        
+        /* Dividers */
+        section[data-testid="stMain"] hr {
+            border-color: #F0EDE8 !important;
+            margin: 1.5rem 0 !important;
+        }
+        
+        /* File Uploader */
+        section[data-testid="stMain"] [data-testid="stFileUploader"] {
+            border: 2px dashed #E8E5E0 !important;
+            background-color: #F9F8F6 !important;
+            border-radius: 8px !important;
+        }
+        
+        section[data-testid="stMain"] [data-testid="stFileUploader"]:hover {
+            border-color: #4A3B32 !important;
+        }
+    </style>
+    """
+
+def get_settings_css():
+    """Returns CSS styling for the Settings page"""
+    return """
+    <style>
+        /* Settings Page Styles */
+        section[data-testid="stMain"] .stTextInput input,
+        section[data-testid="stMain"] .stSelectbox > div > div {
+            border-color: #E8E5E0 !important;
+            background-color: white !important;
+        }
+        
+        /* Ensure all input elements stay white on focus */
+        section[data-testid="stMain"] [data-baseweb="input"]:focus-within,
+        section[data-testid="stMain"] [data-baseweb="select"]:focus-within,
+        section[data-testid="stMain"] input:focus,
+        section[data-testid="stMain"] textarea:focus {
+            background-color: white !important;
+        }
+        
+        /* Buttons */
+        section[data-testid="stMain"] button[kind="primary"] {
+            background-color: #4A3B32 !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 0.5rem 1rem !important;
+            font-weight: 600 !important;
+        }
+        
+        section[data-testid="stMain"] button[kind="primary"]:hover {
+            background-color: #3A2D24 !important;
+        }
+        
+        /* Dividers */
+        section[data-testid="stMain"] hr {
+            border-color: #F0EDE8 !important;
+            margin: 1.5rem 0 !important;
+        }
+    </style>
+    """
+
+# ── st.page_link active / hover styles ──
+NAV_STYLES = """
+<style>
+    /* === Manual page links in sidebar (st.page_link) === */
+
+    /* Compact page-link containers */
+    [data-testid="stSidebar"] .stPageLink {
+        margin-top: 0px !important;
+        margin-bottom: 0px !important;
+    }
+
+    /* All page link items — dark text */
+    [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] {
+        border-radius: 8px !important;
+        padding: 0.2rem 0.75rem !important;
+        min-height: 0px !important;
+        margin-bottom: 2px !important;
+        transition: background-color 0.15s ease, color 0.15s ease !important;
+        color: #3B2F28 !important;
+    }
+    [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] span,
+    [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p {
+        color: #3B2F28 !important;
+        font-weight: 500 !important;
+    }
+    [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] [data-testid="stIconMaterial"] {
+        color: #3B2F28 !important;
+    }
+
+    /* Hover state — transparent dark brown */
+    [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"]:hover {
+        background-color: rgba(70, 56, 48, 0.15) !important;
+    }
+
+    /* Active / selected page — solid dark brown with white text */
+    [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"][aria-current="page"] {
+        background-color: #463830 !important;
+        color: #FFFFFF !important;
+    }
+    [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"][aria-current="page"] span,
+    [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"][aria-current="page"] p {
+        color: #FFFFFF !important;
+        font-weight: 500 !important;
+    }
+    [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"][aria-current="page"] [data-testid="stIconMaterial"] {
+        color: #FFFFFF !important;
     }
 </style>
 """
@@ -1976,6 +2385,7 @@ def get_chat_css():
 def apply_custom_styles():
     """Apply all custom CSS styles to the app"""
     st.markdown(MAIN_STYLES, unsafe_allow_html=True)
+    st.markdown(NAV_STYLES, unsafe_allow_html=True)
 
 
 def apply_sidebar_styles():

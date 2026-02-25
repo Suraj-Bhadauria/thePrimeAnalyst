@@ -1,7 +1,7 @@
-# PayInsight AI - Component Exports
+# Prime Analyst - Component Exports
 # Import all components for easy access
 
-from components.sidebar import render_sidebar
+from components.sidebar import render_sidebar, render_sidebar_content, render_sidebar_header, render_sidebar_body
 from components.home import render_home
 from components.styles import apply_custom_styles
 from components.session import init_session_state, get_workflow, get_messages, add_message
@@ -15,6 +15,9 @@ from components.help import render_help
 __all__ = [
     # Render functions
     "render_sidebar",
+    "render_sidebar_content",
+    "render_sidebar_header",
+    "render_sidebar_body",
     "render_home",
     "apply_custom_styles",
     # Session management
