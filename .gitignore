@@ -3,8 +3,8 @@ __pycache__/
 *$py.class
 *.so
 
-
-
+app_old.py
+test_ui.py
 venv/
 .env
 .env.*

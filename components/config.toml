@@ -1,0 +1,131 @@
+# =============================================================
+# Prime Analyst — Earthy Professional Theme
+# Cream / Brown / Sage palette
+# =============================================================
+# Structure follows the Streamlit theming documentation:
+#   [theme]               — global options (fonts, charts, sidebar border)
+#   [theme.light]         — light-mode colors (main body)
+#   [theme.light.sidebar] — light-mode colors (sidebar)
+# =============================================================
+
+[theme]
+# ── Base ──────────────────────────────────────────────────────
+# Inherit from the built-in light theme as our starting point
+base = "light"
+
+# ── Sidebar border ────────────────────────────────────────────
+# Show the sidebar border so the panel has a clear visual edge
+showSidebarBorder = true
+
+# ── Base font ─────────────────────────────────────────────────
+font = "sans serif"
+
+# ── Chart colors ──────────────────────────────────────────────
+# Applied automatically to Plotly, Altair, and Vega-Lite charts.
+# All chart color overrides have been removed from component
+# Python files — these are the single source of truth.
+
+# Categorical: Brown monochrome scale (8 steps, dark → light)
+# Used for: pie slices, grouped bars, multi-series lines, etc.
+chartCategoricalColors = [
+    "#4A3B32",
+    "#6B5F52",
+    "#8C7B6E",
+    "#A89890",
+    "#B5A99F",
+    "#C9BFB8",
+    "#D9D0CA",
+    "#EAE0D5",
+]
+
+# Sequential: Visible beige → Burnt orange → Dark brown (5 stops)
+# Used for: heatmaps, density charts, single-dimension bar gradients.
+# Starts at a visible tone (#EAE0D5) so low values aren't lost
+# against the page background (#FDFBF7).
+chartSequentialColors = [
+    "#EAE0D5",
+    "#D4B896",
+    "#C2673A",
+    "#B44C3A",
+    "#4A3B32",
+]
+
+# Diverging: Red-brown → Neutral beige → Sage green (5 stops)
+# Used for: correlation matrices, any chart crossing a midpoint.
+# 5 stops give a smooth fade through the neutral midpoint.
+chartDivergingColors = [
+    "#B44C3A",
+    "#D9A89F",
+    "#F2F1EF",
+    "#8FBD9E",
+    "#4A7C59",
+]
+
+
+# =============================================================
+# LIGHT THEME — main body
+# =============================================================
+[theme.light]
+
+# ── Primary color ─────────────────────────────────────────────
+# Dark Brown: focus rings, selected items, primary buttons, active highlights
+primaryColor = "#4A3B32"
+
+# ── Background colors ─────────────────────────────────────────
+backgroundColor          = "#FDFBF7"   # Warm cream — main page canvas
+secondaryBackgroundColor = "#F2F1EF"   # Light beige — widgets, code blocks, dataframe headers
+
+# ── Text colors ───────────────────────────────────────────────
+textColor = "#4A3B32"   # Body text: Dark Brown (matches primaryColor for cohesion)
+linkColor = "#2563EB"   # Links: Blue accent (our accent semantic color)
+
+# ── Border ────────────────────────────────────────────────────
+borderColor = "#D9D0CA"   # Soft warm grey — widget and element borders
+
+# ── Border radius ─────────────────────────────────────────────
+# 6px gives a subtly rounded, modern SaaS feel without being pill-shaped
+borderRadius = "6px"
+
+# ── Basic color palette ───────────────────────────────────────
+# Used for colored Markdown text (:red[...], :green[...], etc.)
+# and for sparklines. Mirrored exactly to SEMANTIC_COLORS in Python
+# so colored Markdown stays visually consistent with chart colors.
+red    = "#B44C3A"   # Danger / decline   — matches SEMANTIC_COLORS["danger"]
+orange = "#C2673A"   # Burnt orange       — UPI / warm accent
+yellow = "#C17F24"   # Amber              — matches SEMANTIC_COLORS["warning"]
+green  = "#4A7C59"   # Sage green         — matches SEMANTIC_COLORS["success"]
+blue   = "#2563EB"   # Blue accent        — matches SEMANTIC_COLORS["accent"]
+violet = "#6B52A0"   # Muted violet       — complementary cool accent
+gray   = "#8C7B6E"   # Warm grey-brown    — mid-tone from categorical palette
+
+
+# =============================================================
+# LIGHT THEME — sidebar
+# =============================================================
+[theme.light.sidebar]
+
+# Slightly warmer and lighter than the main background so the
+# sidebar reads as a distinct panel without needing a hard border.
+backgroundColor          = "#F9F8F6"
+secondaryBackgroundColor = "#FDFBF7"
+
+# Sidebar borders are softer than the main body
+borderColor = "#E5E0D8"
+
+
+# =============================================================
+# SEMANTIC COLORS  (reference — not a Streamlit theme key)
+# =============================================================
+# These values are still hardcoded in SEMANTIC_COLORS dicts in:
+#   analytics.py, dashboard.py, reports.py
+# They carry status meaning that no theme slot can express.
+# If you change them, update each SEMANTIC_COLORS dict to match.
+#
+#   success = "#4A7C59"   Sage green  — approved, positive trend, low risk
+#   warning = "#C17F24"   Amber       — pending, moderate risk
+#   danger  = "#B44C3A"   Red-brown   — declined, negative trend, high risk
+#   accent  = "#2563EB"   Blue        — Pareto cumulative % line, links
+#
+# These are mirrored exactly in the basic color palette above
+# (green, yellow, red, blue) so :green[...] / :red[...] etc.
+# in Markdown stay visually consistent with chart semantic colors.
