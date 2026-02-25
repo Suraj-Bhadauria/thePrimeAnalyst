@@ -51,6 +51,20 @@ DIVERGING_SCALE = [
 # ==========================================
 # 1. INTEGRATION LAYER
 # ==========================================
+
+class _NullAnalyticsService:
+    """Returns empty data structures so the UI renders without a backend."""
+    _EMPTY = {"status": "success", "data": {}}
+
+    def _empty(self, *a, **kw):
+        return self._EMPTY
+
+    get_kpi_summary = get_transaction_overview = get_comparison_data = _empty
+    get_temporal_analysis = get_state_distribution = get_failure_analysis = _empty
+    get_statistical_tests = get_rankings = get_bank_performance = _empty
+    get_fraud_analysis = get_filtered_transactions = get_network_graph_data = _empty
+    get_trend_analysis = get_correlation_analysis = _empty
+
 try:
     from backend.analytics_service import AnalyticsService
     data_service = AnalyticsService()
@@ -59,8 +73,7 @@ except ImportError:
         from test_ui import MockAnalyticsService
         data_service = MockAnalyticsService()
     except ImportError:
-        st.error("Analytics Service Not Found. Please ensure test_ui.py exists.")
-        st.stop()
+        data_service = _NullAnalyticsService()
 
 from components.styles import get_analytics_css
 
@@ -892,6 +905,18 @@ def render_analytics():
 
     if kpi_data["status"] == "error":
         st.error(f"Failed to load analytics: {kpi_data.get('error')}")
+        return
+
+    # If no data is available (no backend, no mock), show empty state
+    if not kpi_data.get("data"):
+        st.title("Analytics Dashboard")
+        st.info("No analytics data available. Connect a backend service or provide mock data to see insights here.")
+        with st.container(border=True):
+            st.markdown("### Overview")
+            cols = st.columns(4, gap="small")
+            for c in cols:
+                with c:
+                    st.metric("—", "N/A")
         return
 
     # === LAYOUT: Main Content (Left) | Filters (Right) ===

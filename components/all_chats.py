@@ -33,11 +33,7 @@ def render_all_chats():
     if USE_MOCK_DATA:
         all_chats = MockData.RECENT_ACTIVITY
     else:
-        all_chats = [
-            {"id": "chat_001", "title": "Q4 Revenue Analysis", "timestamp": "2h ago", "messages": 15},
-            {"id": "chat_002", "title": "Competitive Analysis", "timestamp": "5h ago", "messages": 23},
-            {"id": "chat_003", "title": "Market Trends Report", "timestamp": "1d ago", "messages": 8},
-        ]
+        all_chats = []
     
     # Search and filter
     col1, col2, col3 = st.columns([3, 1, 1])

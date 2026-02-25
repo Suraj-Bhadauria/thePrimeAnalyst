@@ -11,8 +11,45 @@ import random
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-from test_ui import MockData, mock_reasoning_stream, MockChatChartService, GoogleNewsService
 from components.styles import get_chat_css
+
+# --- Graceful fallback when test_ui / backend is not available ---
+try:
+    from test_ui import MockData as _MockData
+    _HAS_MOCK = True
+except ImportError:
+    _HAS_MOCK = False
+
+    class _MockData:
+        USER_PROFILE = {"name": "User", "role": "Analyst",
+                        "avatar_url": "https://api.dicebear.com/7.x/avataaars/svg?seed=Default"}
+        CHAT_SUGGESTIONS = []
+
+try:
+    from test_ui import mock_reasoning_stream
+except ImportError:
+    def mock_reasoning_stream(query):
+        """Placeholder stream — yields a simple 'no backend' message."""
+        yield ("reasoning", "No analytics backend is connected. ")
+        yield ("content", "I'm unable to process queries right now. Please connect a backend service.")
+
+try:
+    from test_ui import MockChatChartService
+except ImportError:
+    class MockChatChartService:
+        def detect_chart_type(self, query):
+            return {"charts": []}
+
+try:
+    from test_ui import GoogleNewsService
+except ImportError:
+    class GoogleNewsService:
+        def __init__(self, **kw):
+            pass
+        def get_relevant_news(self, query):
+            return []
+
+MockData = _MockData
 
 # Chart colors matching the theme
 CHART_COLORS = ["#4A3B32", "#6B5F52", "#8C7B6E", "#A89890", "#B5A99F", "#C9BFB8"]
