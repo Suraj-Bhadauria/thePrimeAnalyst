@@ -1,3 +1,6 @@
+# tools\stats_tools.py
+
+```python
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 import pandas as pd
@@ -157,3 +160,4 @@ def create_stats_tool():
         # func=stats_tool_instance.analyze,
         args_schema=StatsAnalysisInput
     )
+```

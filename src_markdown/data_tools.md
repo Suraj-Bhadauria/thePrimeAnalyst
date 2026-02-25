@@ -1,3 +1,6 @@
+# tools\data_tools.py
+
+```python
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 import pandas as pd
@@ -112,3 +115,4 @@ def create_data_query_tool() :
         # func=query_tool_instance.execute_query,
         args_schema=QueryDataInput
     )
+```

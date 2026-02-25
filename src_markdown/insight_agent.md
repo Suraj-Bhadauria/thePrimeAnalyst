@@ -1,3 +1,6 @@
+# agents\insight_agent.py
+
+```python
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from src.config import config
@@ -27,3 +30,4 @@ class InsightAgent:
         })
         
         return response.content
+```

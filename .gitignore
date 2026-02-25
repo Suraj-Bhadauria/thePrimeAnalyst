@@ -13,3 +13,9 @@ venv/
 *.log
 logs/
 debug.log
+
+# Test files
+test_*.py
+components/test.py
+
+TECHNICAL_ANALYSIS.md

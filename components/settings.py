@@ -1,17 +1,12 @@
 # --- START OF FILE src/components/settings.py ---
 import streamlit as st
-from components.styles import get_settings_css
 
 
 def render_settings():
     """Renders the Settings page with all configuration options."""
     
-    # Apply settings page styles
-    st.markdown(get_settings_css(), unsafe_allow_html=True)
-    
     st.title("Settings")
-    st.caption("Configure your Prime Analyst experience")
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.caption("Configure your PayInsight AI experience")
     
     # Tabs for different settings categories
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -100,7 +95,7 @@ def render_settings():
             "API Key",
             value="sk-...abc123",
             type="password",
-            help="Your Prime Analyst API key"
+            help="Your PayInsight AI API key"
         )
         
         st.text_input(
@@ -155,11 +150,11 @@ def render_settings():
         col_data1, col_data2 = st.columns(2)
         
         with col_data1:
-            if st.button("Export My Data", use_container_width=True):
+            if st.button("Export My Data", width='stretch'):
                 st.info("Data export will be sent to your email")
         
         with col_data2:
-            if st.button("Delete All Data", type="secondary", use_container_width=True):
+            if st.button("Delete All Data", type="secondary", width='stretch'):
                 st.warning("This action cannot be undone")
     
     # ===== ADVANCED TAB =====
@@ -181,7 +176,7 @@ def render_settings():
 Debug Information:
 - Version: 1.0.0
 - Environment: Production
-- API Endpoint: https://api.primeanalyst.ai/v1
+- API Endpoint: https://api.payinsight.ai/v1
 - Session ID: abc-123-def-456
             """)
         
@@ -195,15 +190,12 @@ Debug Information:
     st.divider()
     
     # Action Buttons
-    st.markdown("<br>", unsafe_allow_html=True)
     col_save, col_reset, col_spacer = st.columns([1, 1, 3])
     
     with col_save:
-        if st.button("Save Settings", type="primary", use_container_width=True):
+        if st.button("Save Settings", type="primary", width='stretch'):
             st.success("Settings saved successfully!")
     
     with col_reset:
-        if st.button("Reset to Defaults", type="secondary", use_container_width=True):
+        if st.button("Reset to Defaults", type="secondary", width='stretch'):
             st.info("Settings reset to default values")
-    
-    st.markdown("<br><br>", unsafe_allow_html=True)

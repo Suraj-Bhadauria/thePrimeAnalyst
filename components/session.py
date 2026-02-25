@@ -1,5 +1,5 @@
 """
-Session state management for Prime Analyst
+Session state management for PayInsight AI
 """
 import streamlit as st
 from typing import Any, List, Dict, Optional
@@ -30,7 +30,7 @@ def init_session_state(
     if 'model_settings' not in st.session_state:
         st.session_state.model_settings = {
             "temperature": 0.7,
-            "max_tokens": 1000
+            "max_tokens": 4096
         }
     
     if 'data_settings' not in st.session_state:

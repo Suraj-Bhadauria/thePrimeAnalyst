@@ -1,32 +1,23 @@
 # --- START OF FILE components/home.py ---
 """
-Home Page Component for Prime Analyst
+Home Page Component for PayInsight AI
 """
 
 import streamlit as st
 from components.styles import get_home_css
+from components.ui_config import HOME_DATA, SVG_ICONS
 
 def render_home():
     """
-    Renders the Prime Analyst home page landing view.
+    Renders the PayInsight AI home page landing view.
     """
     
     # Apply home page CSS
     st.markdown(get_home_css(), unsafe_allow_html=True)
     
-    # Load data from test_ui
-    try:
-        from test_ui import MockData
-        home_data = MockData.HOME_DATA
-        svg_icons = MockData.SVG_ICONS
-    except ImportError:
-        home_data = {
-            "badge_text": "INTELLIGENT ANALYTICS",
-            "title": "Prime Analyst",
-            "subtitle": "Your autonomous partner in data analysis.",
-            "feature_cards": [],
-        }
-        svg_icons = {}
+    # Load UI configuration
+    home_data = HOME_DATA
+    svg_icons = SVG_ICONS
     
     # ===== HERO SECTION =====
     with st.container():
@@ -61,9 +52,9 @@ def render_home():
             icon=":material/add:",
             width='content'
         ):
+            st.session_state.current_page = 'chat'
             st.session_state.active_chat_id = None
-            st.session_state.is_new_chat = False
-            st.switch_page(st.session_state.chat_page)
+            st.rerun()
 # ===== STANDALONE TEST =====
 if __name__ == "__main__":
     st.set_page_config(layout="wide")

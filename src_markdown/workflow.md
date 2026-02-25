@@ -1,3 +1,6 @@
+# graph\workflow.py
+
+```python
 # THIS IS THE MAIN ORCHESTRATION WORKFLOW FOR ALL AGENTS
 # - it defines the flow how the pre-defined agents work together
 
@@ -410,28 +413,6 @@ class Workflow:
             else:
                 plan["tool_subtype"] = "single_date"
 
-        # --- correlation ---
-        elif intent == "correlation":
-            plan["suggested_tool"] = "correlation_importance_tool"
-            if any(kw in q for kw in ["combination", "multivariate", "riskiest", "profile"]):
-                plan["tool_subtype"] = "multivariate_combination"
-                plan["factors"] = ["sender_bank", "device_type", "network_type"]
-            elif any(kw in q for kw in ["interaction", "does", "only for", "affect differently"]):
-                plan["tool_subtype"] = "interaction_effects"
-            elif any(kw in q for kw in ["matrix", "pairwise", "all associations", "cramers"]):
-                plan["tool_subtype"] = "cramers_v_matrix"
-            elif any(kw in q for kw in ["amount", "value", "point biserial"]):
-                plan["tool_subtype"] = "point_biserial"
-            else:
-                plan["tool_subtype"] = "feature_importance"
-
-            if any(kw in q for kw in ["fraud"]):
-                plan["metric"] = "fraud"
-            elif any(kw in q for kw in ["success"]):
-                plan["metric"] = "success"
-            else:
-                plan["metric"] = "failure"
-
         return plan
 
     def _format_results_locally(self, question: str, analysis_results: dict) -> str:
@@ -477,8 +458,6 @@ class Workflow:
             # Format based on tool type
             if tool_name == "ranking_tool":
                 formatted_parts.append(self._format_ranking_result(data, question))
-            elif tool_name == "correlation_importance_tool":
-                formatted_parts.append(self._format_correlation_result(data, question))
             else:
                 # Generic formatting for other tools
                 formatted_parts.append(self._format_generic_result(data, question))
@@ -618,143 +597,6 @@ class Workflow:
             if pareto_stmt:
                 lines.append(f"- {pareto_stmt}")
             lines.append("")
-
-        return "\n".join(lines)
-
-    def _format_correlation_result(self, data: dict, question: str) -> str:
-        """Format correlation_importance_tool results as detailed, structured markdown."""
-        lines = []
-        analysis_type = data.get("analysis_type", "")
-
-        # Key finding always at the top
-        kf = data.get("key_finding", "")
-        if kf:
-            lines.append(f"**💡 {kf}**")
-            lines.append("")
-
-        if analysis_type == "feature_importance":
-            lines.append("## 📊 Feature Importance Ranking")
-            lines.append(f"*Target: {data.get('target', 'failure')} | Records: {data.get('total_records', 0):,}*")
-            lines.append("")
-            ranked = data.get("ranked_features", [])
-            if ranked:
-                lines.append("| Rank | Feature | Cramér's V | Strength | Significant |")
-                lines.append("|------|---------|-----------|----------|-------------|")
-                for f in ranked:
-                    sig = "✅" if f.get("significant") else "❌"
-                    lines.append(
-                        f"| {f.get('rank', '')} | **{f.get('feature', '')}** "
-                        f"| {f.get('cramers_v', 0):.4f} | {f.get('strength', '')} | {sig} |"
-                    )
-                lines.append("")
-            feat_summary = data.get("summary", {})
-            if feat_summary.get("strong_predictors"):
-                lines.append(f"**Strong predictors**: {', '.join(feat_summary['strong_predictors'])}")
-            if feat_summary.get("moderate_predictors"):
-                lines.append(f"**Moderate predictors**: {', '.join(feat_summary['moderate_predictors'])}")
-            if feat_summary.get("weak_predictors"):
-                lines.append(f"**Weak predictors**: {', '.join(feat_summary['weak_predictors'])}")
-
-        elif analysis_type == "cramers_v_matrix":
-            lines.append("## 📊 Cramér's V Association Matrix")
-            lines.append("")
-            top_assoc = data.get("top_associations", [])
-            if top_assoc:
-                lines.append("| Rank | Pair | Cramér's V | Strength |")
-                lines.append("|------|------|-----------|----------|")
-                for i, a in enumerate(top_assoc, 1):
-                    pair_str = " × ".join(a.get("pair", []))
-                    lines.append(f"| {i} | {pair_str} | {a.get('cramers_v', 0):.4f} | {a.get('strength', '')} |")
-                lines.append("")
-
-        elif analysis_type == "interaction_effects":
-            lines.append(f"## 📊 Interaction Effects: {data.get('factor_a', '')} × {data.get('factor_b', '')}")
-            lines.append(f"*Target: {data.get('target', '')} | Overall rate: {data.get('overall_rate', 0):.2f}%*")
-            lines.append("")
-            combos = data.get("combinations", [])
-            if combos:
-                lines.append(f"| {data.get('factor_a', 'Factor A')} | {data.get('factor_b', 'Factor B')} | Count | {data.get('target', 'Target')} Rate % | Interaction Effect | Rating |")
-                lines.append("|------|------|-------|---------|-------------------|--------|")
-                for c in combos:
-                    lines.append(
-                        f"| **{c.get('factor_a_value', '')}** | {c.get('factor_b_value', '')} "
-                        f"| {c.get('count', 0):,} | {c.get('target_rate', 0):.2f}% "
-                        f"| {c.get('interaction_effect', 0):+.2f}pp | {c.get('rating', '')} |"
-                    )
-                lines.append("")
-            notable = data.get("notable_interactions", [])
-            if notable:
-                lines.append("### Notable Interactions")
-                for n in notable:
-                    lines.append(f"- {n}")
-                lines.append("")
-
-        elif analysis_type == "multivariate_combination":
-            lines.append("## 📊 Multivariate Combination Analysis")
-            lines.append(f"*Factors: {', '.join(data.get('factors', []))} | Target: {data.get('target', '')} | Baseline: {data.get('overall_baseline_rate', 0):.2f}%*")
-            lines.append("")
-            riskiest = data.get("riskiest_combinations", [])
-            if riskiest:
-                lines.append("### 🔴 Riskiest Combinations")
-                lines.append("| Rank | Combination | Count | Rate % | vs Baseline | Risk Multiplier |")
-                lines.append("|------|------------|-------|--------|-------------|-----------------|")
-                for r in riskiest:
-                    lines.append(
-                        f"| {r.get('rank', '')} | **{r.get('combination_label', '')}** "
-                        f"| {r.get('count', 0):,} | {r.get('target_rate', 0):.2f}% "
-                        f"| {r.get('vs_baseline', 0):+.2f}pp | {r.get('risk_multiplier', 0):.2f}x |"
-                    )
-                lines.append("")
-            safest = data.get("safest_combinations", [])
-            if safest:
-                lines.append("### 🟢 Safest Combinations")
-                lines.append("| Rank | Combination | Count | Rate % | vs Baseline | Risk Multiplier |")
-                lines.append("|------|------------|-------|--------|-------------|-----------------|")
-                for s in safest:
-                    lines.append(
-                        f"| {s.get('rank', '')} | **{s.get('combination_label', '')}** "
-                        f"| {s.get('count', 0):,} | {s.get('target_rate', 0):.2f}% "
-                        f"| {s.get('vs_baseline', 0):+.2f}pp | {s.get('risk_multiplier', 0):.2f}x |"
-                    )
-                lines.append("")
-            insights = data.get("pattern_insights", [])
-            if insights:
-                lines.append("### 💡 Pattern Insights")
-                for ins in insights:
-                    lines.append(f"- {ins}")
-                lines.append("")
-
-        elif analysis_type == "point_biserial":
-            lines.append("## 📊 Point-Biserial Correlation")
-            corr = data.get("correlation", {})
-            lines.append(f"*{data.get('continuous_var', '')} vs {data.get('binary_target', '')} | Records: {data.get('total_records', 0):,}*")
-            lines.append("")
-            lines.append("| Metric | Value |")
-            lines.append("|--------|-------|")
-            lines.append(f"| Correlation (r) | **{corr.get('r', 0):.4f}** |")
-            lines.append(f"| p-value | {corr.get('p_value', 0):.6f} |")
-            lines.append(f"| Significant | {'✅' if corr.get('significant') else '❌'} |")
-            lines.append(f"| Direction | {corr.get('direction', '')} |")
-            lines.append(f"| Effect Size | {corr.get('effect_size', '')} |")
-            lines.append(f"| Cohen's d | {data.get('cohens_d', 0):.4f} |")
-            lines.append("")
-            dists = data.get("group_distributions", {})
-            if dists:
-                lines.append("### Group Distributions")
-                lines.append("| Group | Count | Mean (₹) | Median (₹) | Std |")
-                lines.append("|-------|-------|----------|-----------|-----|")
-                for group, d in dists.items():
-                    lines.append(
-                        f"| **{group.replace('_', ' ').title()}** "
-                        f"| {d.get('count', 0):,} "
-                        f"| ₹{d.get('mean', 0):,.2f} "
-                        f"| ₹{d.get('median', 0):,.2f} "
-                        f"| ₹{d.get('std', 0):,.2f} |"
-                    )
-                lines.append("")
-
-        else:
-            return self._format_deep_dict(data, question)
 
         return "\n".join(lines)
 
@@ -1293,3 +1135,4 @@ class Workflow:
             print(f"\n✅ Workflow completed successfully")
         
         return final_state['final_response']
+```

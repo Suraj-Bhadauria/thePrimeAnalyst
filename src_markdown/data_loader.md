@@ -1,3 +1,6 @@
+# utils\data_loader.py
+
+```python
 # This file defines a Singleton DataLoader class that:
 # Loads transaction data from a CSV
 # Caches it in memory
@@ -125,3 +128,4 @@ class DataLoader:
 
 # It creates a global shared instance that can be imported anywhere.
 data_loader = DataLoader()
+```
