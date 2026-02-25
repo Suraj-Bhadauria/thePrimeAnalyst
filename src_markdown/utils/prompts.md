@@ -1,3 +1,6 @@
+# utils\prompts.py
+
+```python
 from src.config import config
 
 # helper function to convert json data dictionary to natural lang for llm
@@ -31,7 +34,7 @@ Analyze the question and extract the following structured information.
 | comparative        | Compare two or more segments head-to-head                        | "compare X vs Y", "difference between", "which is higher"           |
 | temporal           | Hour-of-day or day-of-week pattern analysis (NOT specific dates) | "peak hours", "busiest day of week", "weekday vs weekend pattern"    |
 | segmentation       | Group-based analysis, rankings, leaderboards                     | "top 5 banks", "rank merchants by", "breakdown by age group"         |
-| correlation        | Statistical relationships, feature importance, interaction effects | "relationship between", "correlation", "does X affect Y", "feature importance", "which factors predict", "interaction between", "what drives fraud", "most important features", "Cramér's V", "point biserial" |
+| correlation        | Statistical relationships between variables                      | "relationship between amount and fraud", "correlation", "does X affect Y" |
 | risk_analysis      | Fraud flag analysis, failure rate analysis                        | "fraud rate", "failure rate", "risky transactions", "flagged"        |
 | trend              | Directional movement of a metric over time, volatility analysis  | "trending up", "growth rate", "is it increasing", "forecast", "volatility", "stability", "unstable", "fluctuation" |
 | date_query         | Any question about a specific calendar date, date range, or month | "on 2024-12-30", "in December", "last week", "Q4 2024"             |
@@ -119,7 +122,7 @@ Examples: count, sum, average, percentage, failure_rate, fraud_rate, median, max
 | comparative        | comparison_tool              |                                                      |
 | temporal           | time_analysis_tool           |                                                      |
 | segmentation       | ranking_tool                 |                                                      |
-| correlation        | correlation_importance_tool   | Feature importance, Cramér's V, interactions, combos |
+| correlation        | statistical_analysis         |                                                      |
 | risk_analysis      | statistical_analysis         |                                                      |
 | trend              | trend_tool                   |                                                      |
 | date_query         | date_query_tool              |                                                      |
@@ -236,7 +239,7 @@ Intent → Tool mapping (use if suggested_tool is missing):
   comparative → comparison_tool
   temporal → time_analysis_tool
   segmentation → ranking_tool
-  correlation → correlation_importance_tool
+  correlation → statistical_analysis
   risk_analysis → statistical_analysis
   trend → trend_tool
   date_query → date_query_tool
@@ -317,19 +320,11 @@ INTENT-SPECIFIC PLANNING RULES
     • Comprehensive risk picture → set suggested_tool = "multi_metric_tool", tool_subtype = "health_scorecard"
 
 ■ correlation
-  Populate: filters, metric, tool_subtype (MANDATORY — one of the 5 analysis types below)
+  Populate: filters, metric
   tool_subtype rules:
-    • "Which factors predict fraud/failure?" / "feature importance" / "what drives X" → "feature_importance"
-      Also set: metric to the target variable ("fraud" or "failure")
-    • "Association matrix" / "relationships between all columns" / "Cramér's V matrix" → "cramers_v_matrix"
-      Also set: segment_column to comma-separated column names if user specifies specific columns
-    • "Interaction between X and Y on fraud" / "combined effect" / "cross-tabulation" → "interaction_effects"
-      Also set: segment_a = first factor column, segment_b = second factor column, metric = target ("fraud" or "failure")
-    • "Riskiest combination" / "multivariate" / "which combination of factors" → "multivariate_combination"
-      Also set: segment_column = comma-separated factor columns (2-4), metric = target
-    • "Point-biserial" / "correlation of amount with fraud" / "continuous vs binary" → "point_biserial"
-      Also set: segment_column = continuous variable (e.g. "amount_inr"), metric = binary target ("fraud" or "failure")
-  Default: if no subtype is obvious, use "feature_importance" with metric = "fraud"
+    • Relationships between variables → "correlation"
+    • Shape of single variable distribution → "distribution"
+    • Comparing two groups statistically → "comparison"
 
 ■ trend
   Populate: filters, metric (MANDATORY), time_granularity, smoothing_window (default 3)
@@ -578,18 +573,6 @@ FOR DATE / TEMPORAL RESULTS: When the results contain date-specific data:
 - Highlight day-of-week effects, weekend patterns, or seasonal trends
 - Discuss what the temporal distribution tells us about user behavior
 
-FOR CORRELATION & FEATURE IMPORTANCE RESULTS: When the results contain correlation analysis data:
-- For feature_importance: Present a COMPLETE ranked table of ALL features showing Rank, Feature Name, Cramér's V score, Strength rating, and Statistical Significance
-- Group features by strength tier (Strong, Moderate, Weak) and explain what each tier means practically
-- For cramers_v_matrix: Show the top associations as a ranked table with pair names and Cramér's V scores
-- For interaction_effects: Present a cross-tabulation table showing how two factors combine, highlight the most dangerous and safest combinations
-- For multivariate_combination: Show riskiest and safest combinations in separate tables with risk multipliers relative to baseline
-- For point_biserial: Present the correlation coefficient, p-value, effect size (Cohen's d), and group distribution comparison
-- ALWAYS explain statistical significance in plain language ("This means the relationship is/is not likely due to chance")
-- Translate Cramér's V values: <0.1 = negligible, 0.1-0.3 = weak, 0.3-0.5 = moderate, >0.5 = strong
-- Highlight actionable findings: which factors should the business focus on to reduce fraud/failure?
-- Use ₹ symbol for any monetary values in group distributions
-
 FOR DESCRIPTIVE / SUMMARY RESULTS: Even for simple count or average questions:
 - Don't just state the number — contextualize it
 - Break it down by available dimensions (type, status, bank, etc.)
@@ -604,3 +587,4 @@ FORMAT REQUIREMENTS:
 - Be comprehensive — show ALL the data, not just highlights
 - Use horizontal rules (---) to separate major sections for readability
 """
+```

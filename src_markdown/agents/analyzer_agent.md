@@ -1,3 +1,6 @@
+# agents\analyzer_agent.py
+
+```python
 # Fixed: Now actually executes tools instead of just binding them
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
@@ -13,7 +16,6 @@ from src.tools.trend_tool import create_trend_tool
 from src.tools.network_graph_tool import create_network_graph_tool
 from src.tools.transaction_resolver_tool import create_transaction_resolver_tool
 from src.tools.date_query_tool import create_date_query_tool
-from src.tools.correlation_tool import create_correlation_tool
 import json
 
 class AnalyzerAgent:
@@ -29,9 +31,8 @@ class AnalyzerAgent:
         self.network_graph_tool = create_network_graph_tool()
         self.transaction_resolver_tool = create_transaction_resolver_tool()
         self.date_query_tool = create_date_query_tool()
-        self.correlation_tool = create_correlation_tool()
         
-        self.tools = [self.data_tool, self.stats_tool, self.time_tool, self.comparison_tool, self.ranking_tool, self.multi_metric_tool, self.trend_tool, self.network_graph_tool, self.transaction_resolver_tool, self.date_query_tool, self.correlation_tool]
+        self.tools = [self.data_tool, self.stats_tool, self.time_tool, self.comparison_tool, self.ranking_tool, self.multi_metric_tool, self.trend_tool, self.network_graph_tool, self.transaction_resolver_tool, self.date_query_tool]
         
         # Create a lookup dict for tool execution
         self.tool_map = {
@@ -44,8 +45,7 @@ class AnalyzerAgent:
             "trend_tool": self.trend_tool,
             "network_graph_tool": self.network_graph_tool,
             "transaction_resolver_tool": self.transaction_resolver_tool,
-            "date_query_tool": self.date_query_tool,
-            "correlation_importance_tool": self.correlation_tool
+            "date_query_tool": self.date_query_tool
         }
 
         self.llm = ChatGroq(
@@ -215,17 +215,6 @@ Anti-Redundancy Rule: When a question requires 3 or more metrics about the same 
                                           'show me the actual', 'underlying transactions',
                                           'transaction_id', 'txn id', 'show the records',
                                           'retrieve transactions', 'get transactions']
-        correlation_keywords = [
-            'what drives', 'what factors', 'which factors', 'most influence',
-            'most influential', 'feature importance', 'what predicts', 'what causes',
-            'strongest predictor', 'cramers', "cramer's", 'cramér', 'association matrix',
-            'interaction between', 'interaction effect', 'does x affect',
-            'combination of', 'riskiest combination', 'worst combination',
-            'which bank and device', 'multivariate', 'point biserial',
-            'amount correlate', 'amount and fraud', 'higher value transactions',
-            'what combination', 'which combination', 'rank the factors',
-            'rank factors', 'rank columns', 'which column', 'which columns predict'
-        ]
         plan_str = json.dumps(execution_plan).lower()
         is_date_query = any(keyword in plan_str for keyword in date_query_keywords)
         # Also detect date patterns (YYYY-MM-DD, DD/MM/YYYY, etc.)
@@ -233,7 +222,6 @@ Anti-Redundancy Rule: When a question requires 3 or more metrics about the same 
         is_date_query = is_date_query or bool(_re.search(r'\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b', plan_str))
         is_date_query = is_date_query or bool(_re.search(r'\b\d{1,2}[-/]\d{1,2}[-/]\d{4}\b', plan_str))
         is_transaction_resolver_query = any(keyword in plan_str for keyword in transaction_resolver_keywords)
-        is_correlation_query = any(keyword in plan_str for keyword in correlation_keywords)
         is_trend_query = any(keyword in plan_str for keyword in trend_keywords)
         is_time_query = any(keyword in plan_str for keyword in time_keywords)
         is_comparison_query = any(keyword in plan_str for keyword in comparison_keywords)
@@ -369,23 +357,6 @@ Use the comparison_tool for this analysis. Choose the appropriate comparison_typ
 - bank_vs_bank: Deep bank comparison with breakdowns by txn type and device
 - device_network_matrix: Full device × network matrix with hotspot detection
 """
-        elif is_correlation_query:
-            routing_hint = """\n\n**IMPORTANT**: This query asks for correlation, feature importance, or factor analysis.
-Use the correlation_importance_tool. Choose the appropriate analysis_type:
-- feature_importance: Rank all factors by their association with failure/fraud/success rate. 
-  Parameters: target (failure/fraud/success), filters (list)
-- cramers_v_matrix: Full pairwise Cramér's V association matrix across all categorical columns.
-  Parameters: include_geography (bool), filters (list)
-- interaction_effects: Detect how two factors interact to affect the target rate.
-  Parameters: factor_a (column), factor_b (column), target, filters, min_sample_size
-- multivariate_combination: Find riskiest/safest combinations of 2-4 factors simultaneously.
-  Parameters: factors (list of columns), target, top_n, min_sample_size, filters
-- point_biserial: Correlation between amount_inr and a binary outcome (fraud/failure).
-  Parameters: continuous_var (default amount_inr), binary_target, filters, include_distribution, segment_by
-
-Parameters JSON should include: target (string), filters (list), factor_a, factor_b, factors (list), 
-top_n (int), min_sample_size (int), include_geography (bool), segment_by (string).
-"""
         else:
             routing_hint = ""
 
@@ -471,7 +442,7 @@ Use the most appropriate tool based on the analysis requirements.
                 "comparative": "comparison_tool",
                 "temporal": "time_analysis_tool",
                 "segmentation": "ranking_tool",
-                "correlation": "correlation_importance_tool",
+                "correlation": "statistical_analysis",
                 "risk_analysis": "statistical_analysis",
                 "trend": "trend_tool",
                 "date_query": "date_query_tool",
@@ -716,44 +687,6 @@ Use the most appropriate tool based on the analysis requirements.
             return {"analysis_type": plan.get("tool_subtype", "distribution"),
                      "parameters": json.dumps(params)}
 
-        if tool_name == "correlation_importance_tool":
-            subtype = plan.get("tool_subtype", "feature_importance")
-            target = plan.get("metric", "failure")
-            # Normalize target names
-            if target in ("failure_rate", "fail"):
-                target = "failure"
-            elif target in ("fraud_rate",):
-                target = "fraud"
-            elif target in ("success_rate",):
-                target = "success"
-            elif target not in ("failure", "fraud", "success"):
-                target = "failure"
-            params = {"target": target, "filters": filters}
-            if subtype == "interaction_effects":
-                params["factor_a"] = plan.get("segment_column", "device_type")
-                factor_b = plan.get("segment_b", plan.get("segment_a", "network_type"))
-                # If factor_b looks like a value rather than column, fallback
-                valid_cols = {"device_type", "network_type", "sender_bank", "sender_age_group",
-                              "sender_state", "transaction_type", "merchant_category"}
-                if factor_b not in valid_cols:
-                    factor_b = "network_type"
-                params["factor_b"] = factor_b
-                params["min_sample_size"] = 100
-            elif subtype == "multivariate_combination":
-                factors = plan.get("factors", None)
-                if not factors:
-                    factors = ["sender_bank", "device_type", "network_type"]
-                params["factors"] = factors
-                params["top_n"] = plan.get("limit", 15) or 15
-                params["min_sample_size"] = 200
-            elif subtype == "cramers_v_matrix":
-                params["include_geography"] = False
-            elif subtype == "point_biserial":
-                params["continuous_var"] = "amount_inr"
-                params["binary_target"] = target
-                params["include_distribution"] = True
-            return {"analysis_type": subtype,
-                     "parameters": json.dumps(params)}
-
         # Generic fallback
         return {"execution_plan": json.dumps(plan)}
+```

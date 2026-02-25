@@ -1,3 +1,6 @@
+# agents\query_agent.py
+
+```python
 # WHAT DOES THIS AGENT DO?
 # - this file takes the user query and sends it to llm to get structured data
 # - converting vague user query into structured data
@@ -46,7 +49,7 @@ VALID_TOOLS = {
     "query_transaction_data", "multi_metric_tool", "comparison_tool",
     "time_analysis_tool", "ranking_tool", "statistical_analysis",
     "trend_tool", "date_query_tool", "network_graph_tool",
-    "transaction_resolver_tool", "correlation_importance_tool",
+    "transaction_resolver_tool",
 }
 
 
@@ -160,7 +163,7 @@ class QueryUnderstandingAgent:
             "trend": "trend_tool",
             "comparative": "comparison_tool",
             "segmentation": "ranking_tool",
-            "correlation": "correlation_importance_tool",
+            "correlation": "statistical_analysis",
             "risk_analysis": "statistical_analysis",
             "descriptive": "query_transaction_data",
         }
@@ -351,3 +354,4 @@ class QueryUnderstandingAgent:
             is_followup=False,
             suggested_tool=self._heuristic_suggested_tool(fallback_intent),
         )
+```
