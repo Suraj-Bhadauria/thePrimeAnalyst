@@ -8,3 +8,10 @@ plotly
 scipy
 python-dotenv
 pydantic
+streamlit-antd-components
+streamlit-float
+audio-recorder-streamlit
+reportlab
+fpdf
+kaleido
+openpyxl
