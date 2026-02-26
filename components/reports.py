@@ -69,14 +69,10 @@ DIVERGING_SCALE = [
 # 1. INTEGRATION LAYER
 # ==========================================
 try:
-    from src.report_service import ReportDataService
+    from src.services.report_service import ReportDataService
     data_service = ReportDataService()
 except ImportError:
-    try:
-        from test_ui import MockReportDataService
-        data_service = MockReportDataService()
-    except ImportError:
-        data_service = None
+    data_service = None
 
 from components.styles import get_report_css
 

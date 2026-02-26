@@ -1,7 +1,8 @@
 # --- START OF FILE components/chat.py ---
 """
 Chat Component with Reasoning Feature
-Professional chat interface with streaming AI responses, charts, and thought process visualization
+Professional chat interface with streaming AI responses, charts, and thought process visualization.
+Wired to the real LangGraph backend workflow.
 """
 
 import streamlit as st
@@ -12,51 +13,23 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 from components.styles import get_chat_css
-
-# --- Graceful fallback when test_ui / backend is not available ---
-try:
-    from test_ui import MockData as _MockData
-    _HAS_MOCK = True
-except ImportError:
-    _HAS_MOCK = False
-
-    class _MockData:
-        USER_PROFILE = {"name": "User", "role": "Analyst",
-                        "avatar_url": "https://api.dicebear.com/7.x/avataaars/svg?seed=Default"}
-        CHAT_SUGGESTIONS = []
-
-try:
-    from test_ui import mock_reasoning_stream
-except ImportError:
-    def mock_reasoning_stream(query):
-        """Placeholder stream — yields a simple 'no backend' message."""
-        yield ("reasoning", "No analytics backend is connected. ")
-        yield ("content", "I'm unable to process queries right now. Please connect a backend service.")
-
-try:
-    from test_ui import MockChatChartService
-except ImportError:
-    class MockChatChartService:
-        def detect_chart_type(self, query):
-            return {"charts": []}
-
-try:
-    from test_ui import GoogleNewsService
-except ImportError:
-    class GoogleNewsService:
-        def __init__(self, **kw):
-            pass
-        def get_relevant_news(self, query):
-            return []
-
-MockData = _MockData
+from components.ui_config import USER_PROFILE, CHAT_SUGGESTIONS
+from src.services.news_service import GoogleNewsService
 
 # Chart colors matching the theme
 CHART_COLORS = ["#4A3B32", "#6B5F52", "#8C7B6E", "#A89890", "#B5A99F", "#C9BFB8"]
 
-# Initialize services
-chart_service = MockChatChartService()
+# Initialize news service
 news_service = GoogleNewsService(use_live_feed=True, cache_duration_minutes=15)
+
+
+class _MockData:
+    """Minimal data holder — sources from ui_config."""
+    USER_PROFILE = USER_PROFILE
+    CHAT_SUGGESTIONS = CHAT_SUGGESTIONS
+
+
+MockData = _MockData
 
 
 def get_dynamic_greeting(user_name):
@@ -324,53 +297,65 @@ def render_chart(chart_config: dict):
                 st.metric(name, val)
 
 
-def stream_ai_response(user_query):
-    """Stream AI response with reasoning, content, and charts."""
+def stream_ai_response(user_query, workflow=None):
+    """Stream AI response using the real LangGraph workflow with thinking callback."""
     reasoning_text = ""
     content_text = ""
-    
-    # Get relevant charts for this query
-    chart_data = chart_service.detect_chart_type(user_query)
-    
-    reasoning_expander = st.expander(f"Thought process", expanded=True)
+
+    reasoning_expander = st.expander("Thought process", expanded=True)
     reasoning_container = reasoning_expander.container()
     reasoning_display = reasoning_container.empty()
     content_display = st.empty()
-    
-    for response_type, chunk in mock_reasoning_stream(user_query):
-        if response_type == "reasoning":
-            reasoning_text += chunk
-            with reasoning_display:
-                st.markdown(f'<div class="reasoning-content">{reasoning_text}</div>', 
-                          unsafe_allow_html=True)
-        elif response_type == "content":
-            content_text += chunk
-            with content_display:
-                st.markdown(content_text)
-    
-    # Render charts after content
-    if chart_data.get("charts"):
-        st.markdown("---")
-        st.markdown("**📊 Relevant Analytics**")
-        
-        # Display charts in columns if multiple
-        charts = chart_data["charts"]
-        if len(charts) == 1:
-            render_chart(charts[0])
-        elif len(charts) == 2:
-            cols = st.columns(2)
-            for i, chart in enumerate(charts):
-                with cols[i]:
-                    render_chart(chart)
-        else:
-            # 3 charts: first full width, then 2 in columns
-            render_chart(charts[0])
-            cols = st.columns(2)
-            for i, chart in enumerate(charts[1:3]):
-                with cols[i]:
-                    render_chart(chart)
-    
-    return reasoning_text, content_text, chart_data
+
+    if workflow is not None:
+        # --- Real backend ---
+        def _thinking_cb(event: dict):
+            nonlocal reasoning_text
+            title = event.get("title", "")
+            detail = event.get("detail", "")
+            status = event.get("status", "")
+            line = ""
+            if title:
+                line += f"**{title}**"
+            if detail:
+                line += f" — {detail}"
+            if status:
+                line += f" _{status}_"
+            if line:
+                reasoning_text += line + "\n\n"
+                with reasoning_display:
+                    st.markdown(
+                        f'<div class="reasoning-content">{reasoning_text}</div>',
+                        unsafe_allow_html=True,
+                    )
+
+        # Build conversation history from session messages
+        history = [
+            {"role": m["role"], "content": m["content"]}
+            for m in st.session_state.get("messages", [])[:-1]  # exclude current user msg
+        ]
+
+        final_response = workflow.run_with_thinking(
+            question=user_query,
+            conversation_history=history,
+            thinking_callback=_thinking_cb,
+        )
+        content_text = final_response or "No response generated."
+        with content_display:
+            st.markdown(content_text)
+    else:
+        # --- No workflow available ---
+        reasoning_text = "No analytics backend connected."
+        with reasoning_display:
+            st.markdown(
+                f'<div class="reasoning-content">{reasoning_text}</div>',
+                unsafe_allow_html=True,
+            )
+        content_text = "Please ensure the backend workflow is initialized."
+        with content_display:
+            st.markdown(content_text)
+
+    return reasoning_text, content_text, {"charts": []}
 
 
 def render_chat(workflow=None, placeholder=None, use_mock=False):
@@ -395,15 +380,6 @@ def render_chat(workflow=None, placeholder=None, use_mock=False):
     if "chat_news" not in st.session_state:
         st.session_state.chat_news = {}
     
-    # Migrate old news_items to chat-specific storage (one-time migration)
-    if "news_items" in st.session_state:
-        # Move old global news to the current chat
-        if st.session_state.news_items:
-            current_id = st.session_state.get('active_chat_id', 'default')
-            st.session_state.chat_news[current_id] = st.session_state.news_items
-        # Remove the old global news_items
-        del st.session_state.news_items
-    
     # Get current active chat ID
     active_chat_id = st.session_state.get('active_chat_id', 'default')
     
@@ -426,7 +402,7 @@ def render_chat(workflow=None, placeholder=None, use_mock=False):
         if not has_messages:
             user_query = render_hero_state()
             if user_query:
-                # Update news based on query for this specific chat
+                # Fetch news for this query
                 st.session_state.chat_news[active_chat_id] = news_service.get_relevant_news(user_query)
                 st.session_state.messages.append({"role": "user", "content": user_query})
                 st.rerun()
@@ -489,7 +465,9 @@ def render_chat(workflow=None, placeholder=None, use_mock=False):
                 
                 st.session_state.is_streaming = True
                 with st.chat_message("assistant", avatar=":material/psychology:"):
-                    reasoning_text, content_text, chart_data = stream_ai_response(last_message['content'])
+                    reasoning_text, content_text, chart_data = stream_ai_response(
+                        last_message['content'], workflow=workflow
+                    )
                 
                 st.session_state.messages.append({
                     "role": "assistant",
@@ -498,6 +476,30 @@ def render_chat(workflow=None, placeholder=None, use_mock=False):
                     "charts": chart_data
                 })
                 st.session_state.is_streaming = False
+
+                # --- Save to chat history for sidebar display ---
+                active_id = st.session_state.get("active_chat_id", "default")
+                chat_history = st.session_state.get("chat_history", [])
+                # Check if this chat already exists in history
+                existing = next((c for c in chat_history if c["id"] == active_id), None)
+                if existing:
+                    existing["messages"] = len(st.session_state.messages)
+                    existing["timestamp"] = datetime.datetime.now().strftime("%I:%M %p")
+                else:
+                    # Create new chat entry — use first user message as title
+                    first_msg = next(
+                        (m["content"][:40] for m in st.session_state.messages if m["role"] == "user"),
+                        "New Chat",
+                    )
+                    chat_history.insert(0, {
+                        "id": active_id,
+                        "title": first_msg,
+                        "timestamp": datetime.datetime.now().strftime("%I:%M %p"),
+                        "messages": len(st.session_state.messages),
+                        "is_active": True,
+                    })
+                st.session_state.chat_history = chat_history
+
                 st.rerun()
             
             # Chat Input (Bottom)
@@ -505,12 +507,11 @@ def render_chat(workflow=None, placeholder=None, use_mock=False):
                 "Say or record something",
                 accept_audio=True)
             if prompt and prompt.text:
-                # Update news based on new query for this specific chat
+                # Fetch news for this query
                 st.session_state.chat_news[active_chat_id] = news_service.get_relevant_news(prompt.text)
                 st.session_state.messages.append({"role": "user", "content": prompt.text})
                 st.rerun()
             if prompt and prompt.audio:
-                 # Update news for audio (use placeholder topic) for this specific chat
                  st.session_state.chat_news[active_chat_id] = news_service.get_relevant_news("transaction analysis")
                  st.session_state.messages.append({"role": "user", "content": f"[Audio: {prompt.audio.name}]"})
                  st.rerun()

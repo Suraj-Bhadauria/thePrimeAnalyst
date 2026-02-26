@@ -1,12 +1,7 @@
 # --- START OF FILE src/components/profile.py ---
 import streamlit as st
 from components.styles import get_profile_css
-
-try:
-    from test_ui import MockData
-    USE_MOCK_DATA = True
-except ImportError:
-    USE_MOCK_DATA = False
+from components.ui_config import USER_PROFILE
 
 
 def render_profile():
@@ -16,10 +11,7 @@ def render_profile():
     st.markdown(get_profile_css(), unsafe_allow_html=True)
     
     # Get user profile data
-    if USE_MOCK_DATA:
-        user_data = MockData.USER_PROFILE
-    else:
-        user_data = {"name": "User", "role": "Analyst", "avatar_url": "https://api.dicebear.com/7.x/avataaars/svg?seed=Default"}
+    user_data = USER_PROFILE
     
     st.title("Profile")
     st.caption("Manage your account information and preferences")

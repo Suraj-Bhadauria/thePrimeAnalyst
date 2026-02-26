@@ -20,6 +20,10 @@ def init_session_state(
     if 'messages' not in st.session_state:
         st.session_state.messages = []
     
+    # Initialize chat history
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
     # Initialize workflow
     if 'workflow' not in st.session_state and workflow_factory:
         with st.spinner("Initializing AI agents..."):

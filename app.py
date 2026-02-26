@@ -24,13 +24,7 @@ from src.graph.workflow import Workflow
 from src.utils.data_loader import data_loader
 from src.config import config
 
-# Try to import mock UI data for development (won't exist in production)
-try:
-    import test_ui
-    USE_MOCK_DATA = True  # Set to False for production
-except ImportError:
-    # Production fallback - test_ui.py not available
-    USE_MOCK_DATA = False
+
 
 
 #Page config
@@ -58,8 +52,7 @@ def _page_chat():
     workflow = get_workflow()
     render_chat(
         workflow=workflow,
-        placeholder="Ask a question about transaction data...",
-        use_mock=USE_MOCK_DATA
+        placeholder="Ask a question about transaction data..."
     )
 
 def _page_dashboard():

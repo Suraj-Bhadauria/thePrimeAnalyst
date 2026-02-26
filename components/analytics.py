@@ -66,14 +66,10 @@ class _NullAnalyticsService:
     get_trend_analysis = get_correlation_analysis = _empty
 
 try:
-    from backend.analytics_service import AnalyticsService
+    from src.services.analytics_service import AnalyticsService
     data_service = AnalyticsService()
 except ImportError:
-    try:
-        from test_ui import MockAnalyticsService
-        data_service = MockAnalyticsService()
-    except ImportError:
-        data_service = _NullAnalyticsService()
+    data_service = _NullAnalyticsService()
 
 from components.styles import get_analytics_css
 

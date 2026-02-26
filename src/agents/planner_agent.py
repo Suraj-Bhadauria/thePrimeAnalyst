@@ -345,6 +345,24 @@ class PlannerAgent:
                 plan.graph_metric = "overview"
                 corrections.append("Defaulted graph_metric to 'overview'")
 
+        # --- "which X" groupby safety net for descriptive queries ---
+        if plan.analysis_intent == "descriptive" and plan.suggested_tool == "query_transaction_data":
+            query_grouping = query_plan.get("grouping", []) or []
+            if query_grouping and not plan.groupby:
+                resolved = []
+                for col in query_grouping:
+                    if col in VALID_COLUMNS:
+                        resolved.append(col)
+                    elif col.lower() in COLUMN_CORRECTION_MAP:
+                        resolved.append(COLUMN_CORRECTION_MAP[col.lower()])
+                if resolved:
+                    plan.groupby = resolved
+                    corrections.append(f"Restored groupby from query_plan.grouping: {resolved}")
+            # If there's still no groupby and no aggregations, add a count aggregation
+            if plan.groupby and not plan.aggregations:
+                plan.aggregations = [{"column": "transaction_id", "function": "count", "alias": "volume"}]
+                corrections.append("Added default count aggregation for groupby query")
+
         if plan.analysis_intent == "drill_down":
             if plan.tool_subtype is None:
                 entities = query_plan.get("entities", {}) or {}

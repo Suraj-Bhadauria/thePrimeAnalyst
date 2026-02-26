@@ -1,5 +1,5 @@
 """
-UI Configuration for PayInsight AI
+UI Configuration for Prime Analyst
 Contains all UI-related settings, labels, and content
 """
 
@@ -17,7 +17,7 @@ USER_PROFILE = {
 # ==========================================
 HOME_DATA = {
     "badge_text": "INTELLIGENT ANALYTICS",
-    "title": "PayInsight AI",
+    "title": "Prime Analyst",
     "subtitle": "Your autonomous partner in transaction data analysis.",
     "feature_cards": [
         {

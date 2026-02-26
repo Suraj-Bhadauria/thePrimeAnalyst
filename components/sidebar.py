@@ -22,25 +22,10 @@ def _init_sidebar_state():
 
 
 def _load_mock_data():
-    """Load mock data for development"""
-    try:
-        from test_ui import MockData
-        return (
-            MockData.USER_PROFILE,
-            MockData.RECENT_ACTIVITY,
-        )
-    except ImportError:
-        return (
-            {
-                "name": "Alex",
-                "role": "Lead Researcher",
-                "avatar_url": "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-            },
-            [
-                {"id": "chat_001", "title": "Q4 Revenue Analysis", "timestamp": "2h ago", "is_active": False, "messages": 15},
-                {"id": "chat_002", "title": "Competitive Analysis", "timestamp": "5h ago", "is_active": True, "messages": 23},
-            ],
-        )
+    """Load user profile and chat history from session state / ui_config."""
+    from components.ui_config import USER_PROFILE
+    chat_history = st.session_state.get("chat_history", [])
+    return (USER_PROFILE, chat_history)
 
 
 # ──────────────────────────────────────────────────────────────

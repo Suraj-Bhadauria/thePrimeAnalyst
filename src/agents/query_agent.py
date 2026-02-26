@@ -130,6 +130,8 @@ class QueryUnderstandingAgent:
                                    "leading", "leaderboard", "pareto",
                                    "share of", "dominant", "popular",
                                    "which state", "which bank", "which category",
+                                   "which network", "which device", "which age",
+                                   "which merchant", "which type",
                                    "rank all", "rank by", "ranked"]):
             return "segmentation"
         # comparative keywords

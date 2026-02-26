@@ -184,7 +184,10 @@ Anti-Redundancy Rule: When a question requires 3 or more metrics about the same 
                             'best', 'worst', 'which', 'leading', 'share', 'dominant',
                             'dominates', 'dominate', 'wallet', 'share-of-wallet',
                             'popular', 'concentrate', 'pareto', 'leaderboard', 'state',
-                            'category', 'distribution']
+                            'category', 'distribution',
+                            'which network', 'which device', 'which bank',
+                            'which state', 'which category', 'which age',
+                            'which merchant', 'which type']
         multi_metric_keywords = ['overall', 'complete', 'full', 'all metrics', 'snapshot',
                                   'dashboard', 'health', 'performance', 'profile', 'how is',
                                   'tell me about', 'breakdown', 'summary', 'scorecard',

@@ -108,6 +108,17 @@ Examples: count, sum, average, percentage, failure_rate, fraud_rate, median, max
 ──────────────────────────────────────────────
 5. GROUPING — What dimensions to group by?
 ──────────────────────────────────────────────
+"Which X" RULE: If the question asks "which network/bank/state/device/category/type/age group...", the answer requires a breakdown. You MUST:
+  • Add the relevant column to the grouping list (e.g. "which network" → ["network_type"], "which bank" → ["sender_bank"])
+  • Set the intent to "segmentation" (not "descriptive") if the question is asking which segment leads/dominates
+  Column mappings for "which X" questions:
+    - "which network" → network_type
+    - "which bank" → sender_bank
+    - "which state" → sender_state
+    - "which device" → device_type
+    - "which category" / "which merchant" → merchant_category
+    - "which type" → transaction_type
+    - "which age group" → sender_age_group
 
 ──────────────────────────────────────────────
 6. SUGGESTED TOOL — Pick exactly ONE tool name from the mapping below:

@@ -5,12 +5,6 @@ Displays a comprehensive list of all chat conversations
 
 import streamlit as st
 
-try:
-    from test_ui import MockData
-    USE_MOCK_DATA = True
-except ImportError:
-    USE_MOCK_DATA = False
-
 
 def render_all_chats():
     """Renders the All Chats page with a comprehensive list of conversations"""
@@ -29,11 +23,8 @@ def render_all_chats():
     
     st.divider()
     
-    # Load all chats from mock data or fallback
-    if USE_MOCK_DATA:
-        all_chats = MockData.RECENT_ACTIVITY
-    else:
-        all_chats = []
+    # Load all chats from session state
+    all_chats = st.session_state.get("chat_history", [])
     
     # Search and filter
     col1, col2, col3 = st.columns([3, 1, 1])

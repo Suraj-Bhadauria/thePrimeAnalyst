@@ -14,19 +14,10 @@ def render_home():
     # Apply home page CSS
     st.markdown(get_home_css(), unsafe_allow_html=True)
     
-    # Load data from test_ui
-    try:
-        from test_ui import MockData
-        home_data = MockData.HOME_DATA
-        svg_icons = MockData.SVG_ICONS
-    except ImportError:
-        home_data = {
-            "badge_text": "INTELLIGENT ANALYTICS",
-            "title": "Prime Analyst",
-            "subtitle": "Your autonomous partner in data analysis.",
-            "feature_cards": [],
-        }
-        svg_icons = {}
+    # Load data from ui_config
+    from components.ui_config import HOME_DATA, SVG_ICONS
+    home_data = HOME_DATA
+    svg_icons = SVG_ICONS
     
     # ===== HERO SECTION =====
     with st.container():

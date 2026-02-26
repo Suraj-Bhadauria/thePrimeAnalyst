@@ -92,6 +92,53 @@ class Workflow:
         "age_group": "sender_age_group",
     }
 
+    # Known data values for keyword-based filter extraction.
+    # Maps lowercase search phrase → (column, exact_value).
+    # Checked against the question text when the LLM fails to produce filters.
+    _KNOWN_VALUE_MAP: Dict[str, tuple] = {
+        # transaction_type values
+        "bill payment":  ("transaction_type", "Bill Payment"),
+        "bill pay":      ("transaction_type", "Bill Payment"),
+        "recharge":      ("transaction_type", "Recharge"),
+        "p2p":           ("transaction_type", "P2P"),
+        "p2m":           ("transaction_type", "P2M"),
+        # merchant_category values
+        "entertainment": ("merchant_category", "Entertainment"),
+        "grocery":       ("merchant_category", "Grocery"),
+        "groceries":     ("merchant_category", "Grocery"),
+        "fuel":          ("merchant_category", "Fuel"),
+        "shopping":      ("merchant_category", "Shopping"),
+        "food":          ("merchant_category", "Food"),
+        "utilities":     ("merchant_category", "Utilities"),
+        "utility":       ("merchant_category", "Utilities"),
+        "transport":     ("merchant_category", "Transport"),
+        "healthcare":    ("merchant_category", "Healthcare"),
+        "health care":   ("merchant_category", "Healthcare"),
+        "education":     ("merchant_category", "Education"),
+    }
+
+    def _extract_filters_from_question(self, question: str, existing_columns: set = None) -> list:
+        """Scan question text for known transaction_type / merchant_category values.
+
+        Returns a list of filter dicts ready to append.  Skips any column
+        already present in *existing_columns* to avoid duplicates.
+        """
+        if not question:
+            return []
+        q_lower = question.lower()
+        existing_columns = existing_columns or set()
+        new_filters: list = []
+        seen_columns: set = set(existing_columns)
+        # Sort by descending length so "bill payment" matches before "bill"
+        for phrase in sorted(self._KNOWN_VALUE_MAP, key=len, reverse=True):
+            col, val = self._KNOWN_VALUE_MAP[phrase]
+            if col in seen_columns:
+                continue
+            if phrase in q_lower:
+                new_filters.append({"column": col, "operator": "==", "value": val})
+                seen_columns.add(col)
+        return new_filters
+
     def _normalize_and_enrich_filters(self, query_plan: dict, question: str = "") -> dict:
         """Fix malformed filters and auto-generate filters from entities.
 
@@ -145,6 +192,13 @@ class Workflow:
                 else:
                     normalized.append({"column": column_name, "operator": "==", "value": val})
 
+        # --- Step 3: Extract filters from question keywords (safety net) ---
+        existing_columns = {f.get("column") for f in normalized}
+        kw_filters = self._extract_filters_from_question(question, existing_columns)
+        if kw_filters:
+            normalized.extend(kw_filters)
+            print(f"  🔧 Keyword-extracted filters added: {kw_filters}")
+
         if normalized != filters:
             print(f"  🔧 Filter normalization: {filters} → {normalized}")
 
@@ -193,11 +247,22 @@ class Workflow:
         elif any(kw in q for kw in ["average", "avg"]):
             metric = "avg_amount"
 
+        # Detect known transaction_type / merchant_category values in question
+        filters = self._extract_filters_from_question(question)
+        # Also populate entities from detected filters for downstream enrichment
+        for f in filters:
+            col = f["column"]
+            val = f["value"]
+            if col == "transaction_type":
+                entities["transaction_type"] = val
+            elif col == "merchant_category":
+                entities["merchant_category"] = val
+
         return {
             "intent": intent,
             "entities": entities,
             "metrics": [metric],
-            "filters": [],
+            "filters": filters,
             "grouping": [],
             "is_followup": False,
             "suggested_tool": tool,
