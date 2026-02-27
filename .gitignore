@@ -21,4 +21,4 @@ components/test.py
 TECHNICAL_ANALYSIS.md
 
 src_markdown/
-export_src_md.py
+export_src_to_md.py
