@@ -19,3 +19,6 @@ test_*.py
 components/test.py
 
 TECHNICAL_ANALYSIS.md
+
+src_markdown/
+export_src_md.py
