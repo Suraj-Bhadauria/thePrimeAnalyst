@@ -36,7 +36,7 @@ class DateQueryInput(BaseModel):
     query_type: str = Field(
         description=(
             "Type of date query: single_date, date_range, month_breakdown, "
-            "month_comparison, date_comparison, date_ranking, calendar_context, "
+            "month_comparison, date_comparison, date_ranking, month_ranking, calendar_context, "
             "relative_date, date_distribution, weekday_vs_weekend_by_date, date_anomaly"
         )
     )
@@ -215,6 +215,7 @@ class DateQueryTool:
             "month_comparison": self._query_month_comparison,
             "date_comparison": self._query_date_comparison,
             "date_ranking": self._query_date_ranking,
+            "month_ranking": self._query_month_ranking,
             "calendar_context": self._query_calendar_context,
             "relative_date": self._query_relative_date,
             "date_distribution": self._query_date_distribution,
@@ -980,6 +981,178 @@ class DateQueryTool:
             ),
             date_parsed_as=", ".join(f"{p.isoformat()} (from '{raw}')" for p, _, raw in parsed_dates),
             fmt_detected="multiple",
+            parse_note="",
+        )
+
+    # ------------------------------------------------------------------
+    # month_ranking
+    # ------------------------------------------------------------------
+
+    def _query_month_ranking(self, params: Dict) -> str:
+        """Rank all months in the dataset by a chosen metric, with optional filters.
+
+        This handles questions like 'which month has the highest food transactions'
+        or 'rank months by fraud rate for P2P transactions'.
+        """
+        metric = params.get("metric", "volume")
+        top_n = int(params.get("top_n", 12))
+        filters = params.get("filters", [])
+        include_benchmarks = params.get("include_benchmarks", True)
+
+        # Apply filters (e.g. merchant_category == 'Food')
+        df = self.df.copy()
+        if filters:
+            df = self._apply_filters(df, filters)
+
+        if len(df) == 0:
+            return self._error_response(
+                "month_ranking",
+                "No transactions match the applied filters.",
+                "Check your filter values and try again.",
+            )
+
+        # Extract month from transaction_date
+        df["_month"] = df["timestamp"].dt.to_period("M")
+
+        # Compute metric per month
+        month_groups = df.groupby("_month")
+        month_data: List[Dict[str, Any]] = []
+
+        for period, grp in month_groups:
+            n = len(grp)
+            total_amt = round(float(grp["amount_inr"].sum()), 2)
+            avg_amt = round(float(grp["amount_inr"].mean()), 2) if n > 0 else 0.0
+            median_amt = round(float(grp["amount_inr"].median()), 2) if n > 0 else 0.0
+
+            success = int(grp["transaction_status"].eq("SUCCESS").sum())
+            failed = int(grp["transaction_status"].eq("FAILED").sum())
+            pending = int(grp["transaction_status"].eq("PENDING").sum())
+            fraud_ct = int(grp["fraud_flag"].sum())
+
+            success_rate = round(success / n * 100, 2) if n else 0.0
+            failure_rate = round(failed / n * 100, 2) if n else 0.0
+            fraud_rate = round(fraud_ct / n * 100, 2) if n else 0.0
+
+            # Determine the metric value used for ranking
+            if metric == "volume":
+                metric_val = float(n)
+            elif metric == "total_amount":
+                metric_val = total_amt
+            elif metric == "avg_amount":
+                metric_val = avg_amt
+            elif metric == "failure_rate":
+                metric_val = failure_rate
+            elif metric == "fraud_rate":
+                metric_val = fraud_rate
+            elif metric == "success_rate":
+                metric_val = success_rate
+            else:
+                metric_val = float(n)
+
+            month_label = str(period)  # e.g. '2024-01'
+            month_name = calendar.month_name[period.month]
+            month_data.append({
+                "month_period": month_label,
+                "month_name": f"{month_name} {period.year}",
+                "month": period.month,
+                "year": period.year,
+                "metric_value": round(metric_val, 2),
+                "total_transactions": n,
+                "total_transactions_formatted": f"{n:,}",
+                "total_amount_inr": total_amt,
+                "avg_amount_inr": avg_amt,
+                "median_amount_inr": median_amt,
+                "success_rate_pct": success_rate,
+                "failure_rate_pct": failure_rate,
+                "fraud_rate_pct": fraud_rate,
+                "fraud_count": fraud_ct,
+                "success_count": success,
+                "failed_count": failed,
+                "pending_count": pending,
+            })
+
+        # Sort: for failure_rate and fraud_rate, lower is better so highest
+        # is worst — we still sort descending to show "highest first"
+        month_data.sort(key=lambda x: x["metric_value"], reverse=True)
+
+        # Assign ranks
+        for i, md in enumerate(month_data):
+            md["rank"] = i + 1
+
+        top_months = month_data[:top_n]
+        bottom_months = list(reversed(month_data[-min(top_n, len(month_data)):]))
+
+        # Overall stats
+        all_values = [md["metric_value"] for md in month_data]
+        dist_summary = {
+            "min": round(min(all_values), 2) if all_values else 0,
+            "max": round(max(all_values), 2) if all_values else 0,
+            "mean": round(float(np.mean(all_values)), 2) if all_values else 0,
+            "median": round(float(np.median(all_values)), 2) if all_values else 0,
+            "std": round(float(np.std(all_values, ddof=1)), 2) if len(all_values) > 1 else 0,
+        }
+
+        # Total across all months (filtered)
+        total_txn = len(df)
+        total_amount = round(float(df["amount_inr"].sum()), 2)
+
+        best = month_data[0] if month_data else None
+        worst = month_data[-1] if month_data else None
+
+        headline = self._generate_headline_answer(
+            "month_ranking",
+            best_month=best,
+            worst_month=worst,
+            metric=metric,
+            total_months=len(month_data),
+        )
+
+        filter_desc = ""
+        if filters:
+            filter_parts = [f"{f.get('column', '')} {f.get('operator', '==')} {f.get('value', '')}" for f in filters]
+            filter_desc = " (filters: " + ", ".join(filter_parts) + ")"
+
+        return self._wrap_response(
+            success=True,
+            query_type="month_ranking",
+            date_scope=f"All {len(month_data)} months ranked by {metric}{filter_desc}",
+            filters_applied=filters,
+            date_not_in_dataset=False,
+            primary_result={
+                "metric": metric,
+                "total_months": len(month_data),
+                "total_transactions": total_txn,
+                "total_transactions_formatted": f"{total_txn:,}",
+                "total_amount_inr": total_amount,
+                "ranked_months": top_months,
+                "bottom_months": bottom_months,
+            },
+            hourly_breakdown=None,
+            include_benchmarks=include_benchmarks,
+            mode_specific_output={
+                "full_ranking": month_data,
+                "metric_distribution_summary": dist_summary,
+                "best_month": best,
+                "worst_month": worst,
+            },
+            headline_answer=headline,
+            key_finding=(
+                f"The month with {'highest' if metric not in ('failure_rate', 'fraud_rate') else 'highest'} "
+                f"{metric} is {best['month_name']} with {best['metric_value']:,.2f}"
+                f"{' transactions' if metric == 'volume' else ''}. "
+                f"The lowest is {worst['month_name']} with {worst['metric_value']:,.2f}."
+            ) if best and worst else "No month data available.",
+            date_context_statement=f"Ranked {len(month_data)} months by {metric}.{filter_desc}",
+            above_or_below="N/A",
+            executive_narrative=(
+                f"Across {len(month_data)} months{filter_desc}, {best['month_name']} leads with "
+                f"{best['metric_value']:,.2f} {metric} ({best['total_transactions']:,} transactions, "
+                f"₹{best['total_amount_inr']:,.2f} total). {worst['month_name']} is at the bottom "
+                f"with {worst['metric_value']:,.2f}. The average across months is "
+                f"{dist_summary['mean']:,.2f} with a spread (σ) of {dist_summary['std']:,.2f}."
+            ) if best and worst else "No month data available.",
+            date_parsed_as="all months",
+            fmt_detected="N/A",
             parse_note="",
         )
 
@@ -2187,6 +2360,22 @@ class DateQueryTool:
                 )
             return "No dates found for ranking."
 
+        if query_type == "month_ranking":
+            best = kwargs.get("best_month")
+            worst = kwargs.get("worst_month")
+            metric = kwargs.get("metric", "volume")
+            total_months = kwargs.get("total_months", 0)
+            if best and worst:
+                metric_label = metric.replace("_", " ")
+                return (
+                    f"{best['month_name']} had the highest {metric_label} "
+                    f"({best['metric_value']:,.2f}{' transactions' if metric == 'volume' else ''}) "
+                    f"across {total_months} months. "
+                    f"{worst['month_name']} had the lowest "
+                    f"({worst['metric_value']:,.2f})."
+                )
+            return "No month data available for ranking."
+
         return ""
 
     # ------------------------------------------------------------------
@@ -2351,9 +2540,11 @@ def create_date_query_tool() -> StructuredTool:
             "Use query_type 'single_date' for specific date questions, 'date_range' for date spans, "
             "'month_breakdown' for single month queries, 'month_comparison' for comparing two or more "
             "months side by side (e.g. January vs February), 'date_comparison' for comparing specific "
-            "dates, 'date_ranking' for finding busiest/quietest dates. Input: query_type (string) and "
+            "dates, 'date_ranking' for finding busiest/quietest dates, 'month_ranking' for ranking "
+            "all months by a metric (e.g. 'which month has the highest food transactions', "
+            "'rank months by fraud rate'). Input: query_type (string) and "
             "parameters (JSON string with date, start_date, end_date, month, year, months_list, metric, "
-            "filters, include_hourly_breakdown)."
+            "filters, top_n, include_hourly_breakdown)."
         ),
         args_schema=DateQueryInput,
     )

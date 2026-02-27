@@ -45,13 +45,52 @@ class AnalyticsService:
             self._df = data_loader.load_data()
         return self._df
 
+    def _apply_filters(self, df, filters):
+        """Apply common filters to a DataFrame copy."""
+        if not filters:
+            return df
+        df = df.copy()
+        if filters.get("date_range"):
+            dr = filters["date_range"]
+            if isinstance(dr, (list, tuple)) and len(dr) >= 2 and "timestamp" in df.columns:
+                import pandas as pd
+                start = pd.Timestamp(dr[0])
+                end = pd.Timestamp(dr[1]) + pd.Timedelta(days=1)  # inclusive end
+                df = df[(df["timestamp"] >= start) & (df["timestamp"] < end)]
+        if filters.get("transaction_type"):
+            df = df[df["transaction_type"].isin(filters["transaction_type"])]
+        if filters.get("transaction_status"):
+            df = df[df["transaction_status"].isin(filters["transaction_status"])]
+        if filters.get("device_type"):
+            df = df[df["device_type"].isin(filters["device_type"])]
+        if filters.get("network_type"):
+            df = df[df["network_type"].isin(filters["network_type"])]
+        if filters.get("sender_state"):
+            df = df[df["sender_state"].isin(filters["sender_state"])]
+        if filters.get("sender_bank"):
+            df = df[df["sender_bank"].isin(filters["sender_bank"])]
+        if filters.get("sender_age_group"):
+            df = df[df["sender_age_group"].isin(filters["sender_age_group"])]
+        return df
+
     # ──────────────────────────────────────────
     # 1. KPI Summary
     # ──────────────────────────────────────────
     @_safe
     def get_kpi_summary(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
         total = len(df)
+        if total == 0:
+            return _ok({
+                "total_volume":   {"value": 0, "trend": "neutral", "change_pct": 0},
+                "total_value":    {"value": 0, "trend": "neutral", "change_pct": 0},
+                "success_rate":   {"value": 0, "trend": "neutral", "change_pct": 0},
+                "avg_txn_amount": {"value": 0, "trend": "neutral", "change_pct": 0},
+                "fraud_flags":    {"value": 0, "trend": "neutral", "change_pct": 0},
+                "active_users":   {"value": 0, "trend": "neutral", "change_pct": 0},
+                "peak_hour":      {"value": 12},
+                "failure_rate":   {"value": 0, "trend": "neutral", "change_pct": 0},
+            })
         total_value = float(df["amount_inr"].sum())
         success = int((df["transaction_status"] == "SUCCESS").sum())
         failed = int((df["transaction_status"] == "FAILED").sum())
@@ -59,7 +98,8 @@ class AnalyticsService:
         fr = round(failed / total * 100, 1) if total else 0
         fraud = int(df["fraud_flag"].sum()) if "fraud_flag" in df.columns else 0
         avg_txn = float(df["amount_inr"].mean())
-        peak_hour = int(df["hour_of_day"].mode().iloc[0]) if "hour_of_day" in df.columns else 12
+        peak_mode = df["hour_of_day"].mode() if "hour_of_day" in df.columns else None
+        peak_hour = int(peak_mode.iloc[0]) if peak_mode is not None and len(peak_mode) > 0 else 12
 
         # "Active users" approximated by unique sender_state × sender_age_group combos
         active = df[["sender_state", "sender_age_group"]].drop_duplicates().shape[0]
@@ -80,7 +120,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_transaction_overview(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
 
         # Volume by type
         vol_type = df["transaction_type"].value_counts().reset_index()
@@ -126,7 +166,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_comparison_data(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
 
         def _metrics(group_col):
             g = df.groupby(group_col).agg(
@@ -154,7 +194,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_temporal_analysis(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
 
         hourly = df.groupby("hour_of_day").size().reset_index(name="count")
         hourly.columns = ["hour", "count"]
@@ -177,7 +217,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_state_distribution(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
         state_vol = (
             df.groupby("sender_state")
             .agg(volume=("transaction_id", "count"))
@@ -193,7 +233,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_failure_analysis(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
         total = len(df)
         failed = (df["transaction_status"] == "FAILED").sum()
         overall_fr = round(failed / total * 100, 2) if total else 0
@@ -218,7 +258,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_statistical_tests(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
         amounts = df["amount_inr"]
 
         desc = {
@@ -236,19 +276,28 @@ class AnalyticsService:
         # Success rate confidence interval (normal approx)
         sr = (df["transaction_status"] == "SUCCESS").mean()
         n = len(df)
-        se = np.sqrt(sr * (1 - sr) / n)
+        se = np.sqrt(sr * (1 - sr) / max(n, 1))
         ci_mean = round(sr * 100, 2)
         ci_lower = round((sr - 1.96 * se) * 100, 2)
         ci_upper = round((sr + 1.96 * se) * 100, 2)
 
         # Simple hypothesis tests table
-        tests = [
-            {"test": "Success Rate vs 95%", "statistic": round((sr - 0.95) / se, 4),
-             "p_value": "< 0.001" if abs((sr - 0.95) / se) > 3 else "> 0.05",
-             "significance": "Significant" if abs((sr - 0.95) / se) > 3 else "Not Significant"},
-            {"test": "Weekend vs Weekday Volume", "statistic": "—",
-             "p_value": "—", "significance": "—"},
-        ]
+        if se > 0:
+            z_stat = round((sr - 0.95) / se, 4)
+            tests = [
+                {"test": "Success Rate vs 95%", "statistic": z_stat,
+                 "p_value": "< 0.001" if abs(z_stat) > 3 else "> 0.05",
+                 "significance": "Significant" if abs(z_stat) > 3 else "Not Significant"},
+                {"test": "Weekend vs Weekday Volume", "statistic": "—",
+                 "p_value": "—", "significance": "—"},
+            ]
+        else:
+            tests = [
+                {"test": "Success Rate vs 95%", "statistic": "—",
+                 "p_value": "—", "significance": "Insufficient data"},
+                {"test": "Weekend vs Weekday Volume", "statistic": "—",
+                 "p_value": "—", "significance": "—"},
+            ]
 
         return _ok({
             "descriptive_stats": desc,
@@ -262,7 +311,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_rankings(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
 
         state_agg = df.groupby("sender_state").agg(
             volume=("transaction_id", "count"),
@@ -296,7 +345,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_bank_performance(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
 
         s_bank = df.groupby("sender_bank").agg(
             volume=("transaction_id", "count"),
@@ -329,7 +378,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_fraud_analysis(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
 
         # Fraud heatmap: hour × day_of_week
         day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -359,21 +408,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_filtered_transactions(self, filters=None):
-        df = self._get_df().copy()
-
-        if filters:
-            if filters.get("transaction_type"):
-                df = df[df["transaction_type"].isin(filters["transaction_type"])]
-            if filters.get("transaction_status"):
-                df = df[df["transaction_status"].isin(filters["transaction_status"])]
-            if filters.get("device_type"):
-                df = df[df["device_type"].isin(filters["device_type"])]
-            if filters.get("network_type"):
-                df = df[df["network_type"].isin(filters["network_type"])]
-            if filters.get("sender_state"):
-                df = df[df["sender_state"].isin(filters["sender_state"])]
-            if filters.get("sender_bank"):
-                df = df[df["sender_bank"].isin(filters["sender_bank"])]
+        df = self._apply_filters(self._get_df(), filters)
 
         sample = df.head(500)
         display_cols = ["transaction_id", "timestamp", "transaction_type",
@@ -395,7 +430,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_network_graph_data(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
 
         # Build a simplified sender_bank → receiver_bank graph
         edges_df = (
@@ -448,7 +483,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_trend_analysis(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
 
         daily = df.groupby(df["timestamp"].dt.date).size().reset_index(name="count")
         daily.columns = ["date", "count"]
@@ -479,10 +514,12 @@ class AnalyticsService:
         anomaly_list = [{"date": str(r["date"]), "value": int(r["count"])} for _, r in anomalies.iterrows()]
 
         # Seasonality
-        peak_day_num = df["day_of_week"].mode().iloc[0] if "day_of_week" in df.columns else 0
+        dow_mode = df["day_of_week"].mode() if "day_of_week" in df.columns else pd.Series(dtype=int)
+        peak_day_num = int(dow_mode.iloc[0]) if len(dow_mode) > 0 else 0
         day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         peak_day = day_names[peak_day_num] if 0 <= peak_day_num < 7 else "Monday"
-        peak_hour = int(df["hour_of_day"].mode().iloc[0]) if "hour_of_day" in df.columns else 12
+        hour_mode = df["hour_of_day"].mode() if "hour_of_day" in df.columns else pd.Series(dtype=int)
+        peak_hour = int(hour_mode.iloc[0]) if len(hour_mode) > 0 else 12
         peak_hour_str = f"{peak_hour}:00" if peak_hour >= 10 else f"0{peak_hour}:00"
 
         return _ok({
@@ -503,7 +540,7 @@ class AnalyticsService:
     # ──────────────────────────────────────────
     @_safe
     def get_correlation_analysis(self, filters=None):
-        df = self._get_df()
+        df = self._apply_filters(self._get_df(), filters)
 
         # Numeric columns for correlation
         numeric_cols = ["amount_inr", "hour_of_day", "day_of_week", "is_weekend", "fraud_flag"]

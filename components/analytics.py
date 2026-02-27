@@ -615,12 +615,22 @@ def render_fraud_deep_dive(fraud_data):
         with c1:
             st.markdown("**High-Risk Time Windows**")
             df_heat = pd.DataFrame(fraud_data["fraud_heatmap"])
-            fig_heat = go.Figure(data=go.Heatmap(
-                z=df_heat['fraud_count'],
-                x=df_heat['hour'],
-                y=df_heat['day'],
-                colorscale=FRAUD_HEATMAP_SCALE
-            ))
+            if not df_heat.empty:
+                # Pivot to 2D matrix for proper heatmap rendering
+                heat_pivot = df_heat.pivot_table(
+                    index='day', columns='hour', values='fraud_count', fill_value=0
+                )
+                fig_heat = go.Figure(data=go.Heatmap(
+                    z=heat_pivot.values,
+                    x=heat_pivot.columns,
+                    y=heat_pivot.index,
+                    colorscale=FRAUD_HEATMAP_SCALE
+                ))
+            else:
+                fig_heat = go.Figure(data=go.Heatmap(
+                    z=[[0]], x=[0], y=['N/A'],
+                    colorscale=FRAUD_HEATMAP_SCALE
+                ))
             fig_heat.update_layout(height=300, margin=dict(t=30, b=10, l=10, r=10))
             st.plotly_chart(fig_heat, use_container_width=True, key="chart_fraud_heatmap")
 
@@ -871,7 +881,7 @@ def render_analytics():
     """Main entry point for the Analytics Page."""
     try:
         st.markdown(get_analytics_css(), unsafe_allow_html=True)
-    except:
+    except Exception:
         pass
 
     if 'analytics_filters' not in st.session_state:
@@ -884,24 +894,38 @@ def render_analytics():
     filters = st.session_state.analytics_filters
 
     with st.spinner("Analyzing ecosystem..."):
-        kpi_data       = data_service.get_kpi_summary()
-        txn_data       = data_service.get_transaction_overview()
-        comp_data      = data_service.get_comparison_data()
-        temp_data      = data_service.get_temporal_analysis()
-        geo_data       = data_service.get_state_distribution()
-        fail_data      = data_service.get_failure_analysis()
-        stats_data     = data_service.get_statistical_tests()
-        rank_data      = data_service.get_rankings()
-        bank_data      = data_service.get_bank_performance()
-        fraud_data_adv = data_service.get_fraud_analysis()
+        kpi_data       = data_service.get_kpi_summary(filters)
+        txn_data       = data_service.get_transaction_overview(filters)
+        comp_data      = data_service.get_comparison_data(filters)
+        temp_data      = data_service.get_temporal_analysis(filters)
+        geo_data       = data_service.get_state_distribution(filters)
+        fail_data      = data_service.get_failure_analysis(filters)
+        stats_data     = data_service.get_statistical_tests(filters)
+        rank_data      = data_service.get_rankings(filters)
+        bank_data      = data_service.get_bank_performance(filters)
+        fraud_data_adv = data_service.get_fraud_analysis(filters)
         table_data     = data_service.get_filtered_transactions(filters)
         net_data       = data_service.get_network_graph_data(filters)
-        trend_data     = data_service.get_trend_analysis()
-        corr_data      = data_service.get_correlation_analysis()
+        trend_data     = data_service.get_trend_analysis(filters)
+        corr_data      = data_service.get_correlation_analysis(filters)
 
-    if kpi_data["status"] == "error":
-        st.error(f"Failed to load analytics: {kpi_data.get('error')}")
-        return
+    # Check for errors in any service call
+    all_results = {
+        "KPI Summary": kpi_data, "Transaction Overview": txn_data,
+        "Comparison": comp_data, "Temporal Analysis": temp_data,
+        "Geographic": geo_data, "Failure Analysis": fail_data,
+        "Statistics": stats_data, "Rankings": rank_data,
+        "Bank Performance": bank_data, "Fraud Analysis": fraud_data_adv,
+        "Transactions": table_data, "Network Graph": net_data,
+        "Trends": trend_data, "Correlations": corr_data,
+    }
+    errors = {k: v.get("error", "Unknown") for k, v in all_results.items() if v.get("status") == "error"}
+    if errors:
+        for section, err in errors.items():
+            st.error(f"{section}: {err}")
+        # If KPI data failed, we can't render anything
+        if kpi_data["status"] == "error":
+            return
 
     # If no data is available (no backend, no mock), show empty state
     if not kpi_data.get("data"):
@@ -924,36 +948,54 @@ def render_analytics():
 
     with main_col:
         st.title("Analytics Dashboard")
-        st.markdown(
-            f"**Period:** {filters['date_range'][0].strftime('%Y-%m-%d')} "
-            f"to {filters['date_range'][1].strftime('%Y-%m-%d')}"
-        )
+        # Guard against incomplete date_range (tuple may have <2 elements)
+        dr = filters.get("date_range", ())
+        if isinstance(dr, (list, tuple)) and len(dr) >= 2:
+            st.markdown(
+                f"**Period:** {dr[0].strftime('%Y-%m-%d')} "
+                f"to {dr[1].strftime('%Y-%m-%d')}"
+            )
+        elif isinstance(dr, (list, tuple)) and len(dr) == 1:
+            st.markdown(f"**Period:** From {dr[0].strftime('%Y-%m-%d')}")
 
-        render_kpi_section(kpi_data["data"])
+        if kpi_data.get("data"):
+            render_kpi_section(kpi_data["data"])
 
         tab_overview, tab_deep_dive, tab_intel, tab_data_grid = st.tabs(
             ["Overview", "Deep Dive Analysis", "Network & Trends (Beta)", "Transaction Data"]
         )
 
         with tab_overview:
-            render_transaction_overview(txn_data["data"])
-            render_comparison_section(comp_data["data"])
-            render_temporal_analysis(temp_data["data"])
-            render_geo_and_failure(geo_data["data"], fail_data["data"])
+            if txn_data.get("data"):
+                render_transaction_overview(txn_data["data"])
+            if comp_data.get("data"):
+                render_comparison_section(comp_data["data"])
+            if temp_data.get("data"):
+                render_temporal_analysis(temp_data["data"])
+            if geo_data.get("data") and fail_data.get("data"):
+                render_geo_and_failure(geo_data["data"], fail_data["data"])
 
         with tab_deep_dive:
-            render_statistical_analysis(stats_data["data"])
-            render_rankings_section(rank_data["data"])
-            render_bank_matrix(bank_data["data"])
-            render_fraud_deep_dive(fraud_data_adv["data"])
+            if stats_data.get("data"):
+                render_statistical_analysis(stats_data["data"])
+            if rank_data.get("data"):
+                render_rankings_section(rank_data["data"])
+            if bank_data.get("data"):
+                render_bank_matrix(bank_data["data"])
+            if fraud_data_adv.get("data"):
+                render_fraud_deep_dive(fraud_data_adv["data"])
 
         with tab_intel:
-            render_network_analysis(net_data["data"])
-            render_trend_forecast(trend_data["data"])
-            render_correlation_lab(corr_data["data"])
+            if net_data.get("data"):
+                render_network_analysis(net_data["data"])
+            if trend_data.get("data"):
+                render_trend_forecast(trend_data["data"])
+            if corr_data.get("data"):
+                render_correlation_lab(corr_data["data"])
 
         with tab_data_grid:
-            render_transaction_table(table_data["data"])
+            if table_data.get("data"):
+                render_transaction_table(table_data["data"])
 
 
 # Standalone execution for testing

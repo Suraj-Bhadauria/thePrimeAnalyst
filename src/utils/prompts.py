@@ -34,7 +34,7 @@ Analyze the question and extract the following structured information.
 | correlation        | Statistical relationships, feature importance, interaction effects | "relationship between", "correlation", "does X affect Y", "feature importance", "which factors predict", "interaction between", "what drives fraud", "most important features", "Cramér's V", "point biserial" |
 | risk_analysis      | Fraud flag analysis, failure rate analysis                        | "fraud rate", "failure rate", "risky transactions", "flagged"        |
 | trend              | Directional movement of a metric over time, volatility analysis  | "trending up", "growth rate", "is it increasing", "forecast", "volatility", "stability", "unstable", "fluctuation" |
-| date_query         | Any question about a specific calendar date, date range, or month | "on 2024-12-30", "in December", "last week", "Q4 2024"             |
+| date_query         | Any question about a specific calendar date, date range, or month | \"on 2024-12-30\", \"in December\", \"last week\", \"Q4 2024\", \"which month has the highest\", \"on which month\"             |
 | network_analysis   | P2P money flow graph — cycles, hubs, communities, PageRank       | "round-trip money flow", "money mules", "P2P network", "communities" |
 | drill_down         | Retrieve actual transaction records or IDs behind a finding      | "show me the transactions", "give me the IDs", "list the records"    |
 
@@ -57,6 +57,10 @@ trend vs segmentation:
 drill_down vs descriptive:
   • If the question asks for actual transaction IDs, specific records, raw evidence, proof, or says "show me the transactions" / "list the records" → choose drill_down.
   • If the question asks for counts, averages, sums, or aggregated statistics → choose descriptive.
+
+segmentation vs date_query (month ranking):
+  • If the question asks "which month has the highest/lowest X" or "on which month are X transactions highest" or "rank months by" → choose date_query (with date_query_subtype = "month_ranking"). Month-level ranking is a DATE operation, not segmentation.
+  • If the question asks "which bank/state/category/device has the highest X" (non-time dimensions) → choose segmentation.
 
 ──────────────────────────────────────────────
 2. ENTITIES — Extract ALL mentioned values (leave as null if not mentioned):
@@ -91,7 +95,7 @@ Drill-down entities (only when intent is drill_down):
 
 Date query entities (only when intent is date_query):
   - date_reference: the specific date, month, year, or relative period extracted verbatim (e.g. "2024-12-30", "December", "last week", "Q4 2024")
-  - date_query_subtype: one of "single_date", "date_range", "month_breakdown", "month_comparison", "relative", "ranking", "anomaly" — infer from the question structure. Use "month_comparison" when the question compares two or more months (e.g. 'January vs February 2024')
+  - date_query_subtype: one of "single_date", "date_range", "month_breakdown", "month_comparison", "month_ranking", "relative", "ranking", "anomaly" — infer from the question structure. Use "month_comparison" when the question compares two or more months (e.g. 'January vs February 2024'). Use "month_ranking" when the question asks which month is highest/lowest or asks to rank months by a metric (e.g. 'which month has the most food transactions', 'rank months by fraud rate').
 
 Temporal entities (only when intent is temporal):
   - time_granularity: one of "hour_of_day", "day_of_week", "weekend_weekday" — extracted from the question
@@ -236,7 +240,7 @@ CONDITIONALLY include these tool-specific fields based on intent:
   • time_granularity     — hour_of_day, day_of_week, or date
   • smoothing_window     — integer SMA window (default 3 for trends)
   • date_reference       — specific date/range/month string (MANDATORY for date_query)
-  • date_query_subtype   — single_date, date_range, month_breakdown, month_comparison, date_comparison, date_ranking, calendar_context, relative_date, date_distribution, weekday_vs_weekend_by_date, date_anomaly
+  • date_query_subtype   — single_date, date_range, month_breakdown, month_comparison, month_ranking, date_comparison, date_ranking, calendar_context, relative_date, date_distribution, weekday_vs_weekend_by_date, date_anomaly
   • graph_metric         — overview, cycles, hubs, communities, pagerank, centrality, paths, fraud_composite
   • time_window_hours    — integer for cycle detection window
   • is_chained_resolver  — true if drill_down references prior finding, false otherwise
@@ -298,6 +302,7 @@ INTENT-SPECIFIC PLANNING RULES
     • Question asks for a range of dates ("from X to Y", "between", "last 7 days") → "date_range"
     • Question asks about an entire month without a specific date ("December performance", "monthly breakdown") → "month_breakdown"
     • Question compares two or more months ("January vs February 2024", "compare Q1 months") → "month_comparison"
+    • Question asks which month has highest/lowest, or to rank months by a metric ("which month has the most food transactions", "on which month are transactions highest", "rank months by fraud rate", "month with highest sales") → "month_ranking"
     • Question compares two specific dates → "date_comparison"
     • Question asks which date was busiest/quietest → "date_ranking"
     • Question asks about calendar context or peer dates → "calendar_context"

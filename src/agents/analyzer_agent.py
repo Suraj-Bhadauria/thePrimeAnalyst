@@ -72,7 +72,7 @@ Available tools:
 - multi_metric_tool: For ALL multi-KPI questions requiring several metrics at once on the same dataset. Use this for "complete picture," "full snapshot," "health check," "overall performance," "give me all metrics," "how is X performing," and any question that would otherwise require multiple separate tool calls. Computes count, average amount, failure rate, fraud rate, success rate, and 20+ more metrics in a single pass. Input: analysis_mode (string: snapshot, grouped_snapshot, multi_group_snapshot, segment_profile, health_scorecard, transaction_type_profile, temporal_snapshot, funnel_analysis, anomaly_snapshot, comparative_snapshot) and parameters (JSON string with filters, group_by, include_benchmarks, metrics_to_include).
 - trend_tool: For ALL time-series and trend questions. Use this when questions involve how a metric changes over time, whether something is increasing or decreasing, trend direction, patterns across hours or days, trajectory analysis, or SMA smoothing. Use this for questions containing words like "trend," "over time," "increasing," "decreasing," "pattern," "trajectory," "moving average," "how does X change," "getting better/worse," "rising/falling," and "across the day/week." Input: trend_type (string: hourly_trend, daily_trend, date_trend, multi_metric_trend, segmented_trend, rolling_anomaly_trend, acceleration_trend, comparative_period_trend, cumulative_trend, volatility_trend) and parameters (JSON string with metric, time_granularity, smoothing_window, smoothing_method, filters, segment_column, segment_values, secondary_metrics, include_forecast, period_a_filter, period_b_filter, period_a_label, period_b_label).
 - network_graph_tool: For ALL P2P network relationship analysis, money flow graph analysis, cycle detection, round-tripping detection, money mule identification, hub detection, centrality analysis, community detection, and PageRank analysis. Use this when questions involve P2P money flow patterns, circular transactions, suspicious sender-receiver relationships, network structure, or graph-based fraud detection. This tool exclusively analyzes P2P transactions — it automatically filters to transaction_type == 'P2P' before building the graph. For non-P2P transaction analysis, use other tools. Input: graph_analysis_type (string: graph_overview, cycle_detection, degree_centrality, hub_identification, flow_analysis, community_detection, path_analysis, temporal_graph_analysis, pagerank_analysis, composite_fraud_graph) and parameters (JSON string with time_window_hours, top_n_hubs, min_cycle_length, max_cycle_length, filters, include_amount_weights, status_filter, min_transaction_count, centrality_threshold, pagerank_damping, community_resolution, node_a, node_b).
-- date_query_tool: Use this tool for ALL questions involving specific calendar dates, date ranges, months, or any query where the user mentions an actual date like '2024-12-30' or 'December' or 'last week.' This is the ONLY tool in the system that can filter by calendar date — no other tool can do this. Use query_type 'single_date' for specific date questions, 'date_range' for date spans, 'month_breakdown' for single month queries, 'month_comparison' for comparing two or more months side by side (e.g. 'January vs February 2024', 'compare Q1 months'), 'date_comparison' for comparing specific dates, 'date_ranking' for finding busiest/quietest dates, 'calendar_context' for date context and peer comparisons, 'relative_date' for relative time references, 'date_distribution' for volume distribution, 'weekday_vs_weekend_by_date' for weekend vs weekday by actual dates, 'date_anomaly' for unusual days. Input: query_type (string) and parameters (JSON string with date, start_date, end_date, month, year, months_list, dates_list, reference_date, relative_period, metric, filters, include_hourly_breakdown).
+- date_query_tool: Use this tool for ALL questions involving specific calendar dates, date ranges, months, or any query where the user mentions an actual date like '2024-12-30' or 'December' or 'last week.' This is the ONLY tool in the system that can filter by calendar date — no other tool can do this. Use query_type 'single_date' for specific date questions, 'date_range' for date spans, 'month_breakdown' for single month queries, 'month_comparison' for comparing two or more months side by side (e.g. 'January vs February 2024', 'compare Q1 months'), 'month_ranking' for ranking all months by a metric with optional filters (e.g. 'which month has the highest food transactions', 'rank months by fraud rate'), 'date_comparison' for comparing specific dates, 'date_ranking' for finding busiest/quietest dates, 'calendar_context' for date context and peer comparisons, 'relative_date' for relative time references, 'date_distribution' for volume distribution, 'weekday_vs_weekend_by_date' for weekend vs weekday by actual dates, 'date_anomaly' for unusual days. Input: query_type (string) and parameters (JSON string with date, start_date, end_date, month, year, months_list, dates_list, reference_date, relative_period, metric, filters, top_n, include_hourly_breakdown).
 - transaction_resolver_tool: Use this WHENEVER a user asks for actual transaction IDs, specific transaction records, raw evidence behind a finding, or drill-down details after any prior analysis. This is the ONLY tool that returns individual transaction rows and IDs. Use resolution_mode "context_aware_resolver" when the user asks "show me the transactions" or "give me the IDs" after a prior tool output — pass the prior output as prior_tool_output parameter. Use "criteria_based" for direct filtering requests. Use "profile_based_resolver" for natural language transaction descriptions. NEVER return empty transaction lists — if no transactions match, explain why and suggest alternative criteria. Input: resolution_mode (string) and parameters (JSON string with filters, top_n, sort_by, prior_tool_output, prior_tool_name, user_intent, node_id, cycle_nodes, community_id).
 
 CRITICAL ANTI-HALLUCINATION RULE: When a user asks for transaction IDs or specific transactions after a prior analysis, ALWAYS call transaction_resolver_tool before generating a response. NEVER generate transaction IDs, amounts, or transaction details from memory or inference — only report what transaction_resolver_tool actually returns. If the tool returns zero transactions, report zero and explain why — never invent transaction data.
@@ -102,6 +102,7 @@ Tool Selection Guidelines:
 - For fraud or failure ranking across segments → use ranking_tool
 - For ANY question mentioning a specific date (YYYY-MM-DD, 'December 30', 'on that day', 'this month', 'in December', 'daily count', 'how many on', 'transactions on', 'what happened on', 'last week', 'yesterday', a 4-digit year, a month name) → ALWAYS use date_query_tool FIRST
 - For comparing two or more months (e.g. 'January vs February 2024', 'compare months') → use date_query_tool with query_type='month_comparison' and months_list parameter
+- For 'which month has the highest/lowest X', 'on which month are X transactions highest', 'rank months by', 'busiest month' → use date_query_tool with query_type='month_ranking' and metric/filters parameters
 - For general data queries without time, comparison, or ranking focus → use query_transaction_data
 - For statistical tests (correlation, distribution) without time, comparison, or ranking focus → use statistical_analysis
 - For ANY question needing multiple metrics at once (snapshot, health check, full picture, overall performance, dashboard, scorecard, funnel, profile, anomaly check, executive summary) → use multi_metric_tool
@@ -209,7 +210,10 @@ Anti-Redundancy Rule: When a question requires 3 or more metrics about the same 
                                'specific date', 'date range', 'month breakdown', 'which date',
                                'busiest date', 'quietest date', 'compare dates', 'date comparison',
                                'on 2024', 'on 2025', 'dec 30', 'dec 31', 'jan 1',
-                               'weekend vs weekday by date', 'anomalous day', 'unusual day']
+                               'weekend vs weekday by date', 'anomalous day', 'unusual day',
+                               'which month', 'on which month', 'what month', 'rank months',
+                               'month with highest', 'month with lowest', 'month with most',
+                               'monthly ranking', 'highest month', 'busiest month']
         transaction_resolver_keywords = ['transaction id', 'transaction ids', 'show me the transactions',
                                           'give me the records', 'actual transactions', 'drill down',
                                           'evidence', 'which transactions', 'list transactions',
@@ -251,6 +255,7 @@ Use the date_query_tool for this analysis. Choose the appropriate query_type:
 - date_range: Aggregated and day-by-day metrics across a span of dates
 - month_breakdown: Full day-by-day breakdown for an entire month
 - month_comparison: Compare metrics between two or more months side by side (e.g. 'January vs February 2024'). Parameters: months_list (list of {month, year} dicts or 'Month YYYY' strings)
+- month_ranking: Rank ALL months by a chosen metric with optional filters (e.g. 'which month has the highest food transactions', 'rank months by fraud rate', 'on which month are transactions highest'). Parameters: metric (volume, total_amount, avg_amount, failure_rate, fraud_rate, success_rate), filters (list), top_n (int, default 12)
 - date_comparison: Compare metrics between two or more specific dates side by side
 - date_ranking: Rank all dates by a chosen metric (busiest/quietest days)
 - calendar_context: Full calendar context for a date with peer comparisons
@@ -261,6 +266,7 @@ Use the date_query_tool for this analysis. Choose the appropriate query_type:
 
 Parameters JSON should include: date (string), start_date, end_date, month (int), year (int), months_list (list of {month, year} dicts or 'Month YYYY' strings), dates_list (list), reference_date, relative_period, metric, filters (list), top_n (int), include_hourly_breakdown (bool), include_benchmarks (bool), anomaly_threshold_multiplier (float).
 For month-vs-month comparisons (e.g. 'January vs February 2024'), use query_type='month_comparison' with months_list=[{"month":1,"year":2024},{"month":2,"year":2024}].
+For 'which month has the highest/lowest X' or 'rank months by X', use query_type='month_ranking' with metric and filters.
 This is the ONLY tool that can filter by actual calendar dates. Do NOT use time_analysis_tool or trend_tool for date-specific queries.
 """
         elif is_transaction_resolver_query:
@@ -666,11 +672,36 @@ Use the most appropriate tool based on the analysis requirements.
             # For month_breakdown, also extract explicit month/year into params
             query_subtype = plan.get("date_query_subtype", plan.get("tool_subtype", "single_date"))
 
+            # --- Auto-detect month_ranking: questions like "which month has the
+            #     highest food transactions" or "on which month are X highest" ---
+            orig_q = plan.get("original_question", "")
+            orig_q_lower = orig_q.lower()
+            is_month_ranking_query = any(kw in orig_q_lower for kw in [
+                "which month", "on which month", "what month",
+                "rank months", "rank all months", "month with highest",
+                "month with lowest", "month with most", "month with least",
+                "highest month", "lowest month", "busiest month",
+                "monthly ranking", "months ranked",
+            ])
+            # Also detect patterns like "on which month X are the highest"
+            if not is_month_ranking_query:
+                import re as _re_mr
+                is_month_ranking_query = bool(_re_mr.search(
+                    r'(which|what|on which)\s+month.*(highest|lowest|most|least|maximum|minimum|peak|busiest)',
+                    orig_q_lower
+                )) or bool(_re_mr.search(
+                    r'(highest|lowest|most|least|maximum|minimum|peak|busiest)\s+month',
+                    orig_q_lower
+                ))
+
+            if is_month_ranking_query and query_subtype not in ("month_comparison",):
+                query_subtype = "month_ranking"
+                params["metric"] = plan.get("metric", "volume")
+                params["top_n"] = plan.get("limit", 12) or 12
+
             # Auto-detect month comparison: if the original question compares
             # two or more months (e.g. "January vs February 2024"), upgrade
             # month_breakdown to month_comparison and build months_list.
-            orig_q = plan.get("original_question", "")
-            orig_q_lower = orig_q.lower()
             import calendar as _cal_mc
             _mc_month_map = {name.lower(): i for i, name in enumerate(_cal_mc.month_name) if i}
             _mc_month_map.update({name.lower(): i for i, name in enumerate(_cal_mc.month_abbr) if i})
@@ -687,6 +718,7 @@ Use the most appropriate tool based on the analysis requirements.
             ])
             if len(mentioned_months) >= 2 and (is_compare_query or query_subtype in ("month_breakdown", "single_date")):
                 # Extract year
+                import re as _re
                 ym_match = _re.search(r'\b(20\d{2})\b', orig_q)
                 default_year = int(ym_match.group(1)) if ym_match else 2024
                 months_list = [{"month": m, "year": default_year} for m in mentioned_months]
